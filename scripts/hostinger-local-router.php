@@ -13,6 +13,10 @@ if ($path === '/api/search' || $path === '/api/search/') {
     require $documentRoot . '/api/search.php';
     return true;
 }
+if ($path === '/api/flashcards/evaluate' || $path === '/api/flashcards/evaluate/') {
+    require $documentRoot . '/api/flashcards-evaluate.php';
+    return true;
+}
 
 $candidate = $documentRoot . str_replace('/', DIRECTORY_SEPARATOR, $path);
 if (is_file($candidate)) {

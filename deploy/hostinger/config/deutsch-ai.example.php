@@ -18,4 +18,8 @@ return [
         'window_seconds' => 600,
         'salt' => 'replace-with-a-random-secret',
     ],
+    'flashcard_rate_limit' => [
+        'limit' => 120,
+        'window_seconds' => 600,
+    ],
 ];
