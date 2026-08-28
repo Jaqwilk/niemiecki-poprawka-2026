@@ -32,8 +32,7 @@ export function StudyDashboard() {
   return (
     <StudyPageShell
       eyebrow="Momente A1.2 · Lektion 13–18"
-      title="Niemiecki. Pięć dni."
-      description="Spokojny plan: naucz się, przypomnij, przećwicz i popraw każdy błąd."
+      title="Plan nauki"
     >
       <section aria-labelledby="day-heading">
         <div className="flex flex-wrap items-end justify-between gap-5">
@@ -160,7 +159,7 @@ export function StudyDashboard() {
             description={
               openMistakes.length > 0
                 ? 'Popraw najpierw to, co nadal nie jest odtwarzane z pamięci.'
-                : 'Brak otwartych błędów. Historia popraw pozostaje zapisana.'
+                : 'Brak otwartych błędów.'
             }
           />
           <Card
@@ -170,7 +169,7 @@ export function StudyDashboard() {
             description={
               weakTopics.length > 0
                 ? weakTopics.join(' · ')
-                : 'Pojawią się po pierwszych odpowiedziach — bez wymyślonych statystyk.'
+                : 'Brak danych. Pojawią się po pierwszych odpowiedziach.'
             }
           />
           <Card

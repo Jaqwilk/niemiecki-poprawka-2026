@@ -23,7 +23,7 @@ export function StudyPageShell({
   className,
 }: StudyPageShellProps) {
   return (
-    <DocsPage>
+    <DocsPage footer={{ enabled: false }}>
       <div className={cn(className)}>
         {eyebrow ? (
           <p className="text-xs font-semibold tracking-[0.15em] text-fd-muted-foreground uppercase">
@@ -32,11 +32,10 @@ export function StudyPageShell({
         ) : null}
         <DocsTitle className={eyebrow ? 'mt-2' : undefined}>{title}</DocsTitle>
         {description ? (
-          <DocsDescription>{description}</DocsDescription>
+          <DocsDescription className="mb-0 mt-2">{description}</DocsDescription>
         ) : null}
-        <div className="border-b border-fd-border pb-6" />
-        <DocsBody>
-          <div className="not-prose pt-2">{children}</div>
+        <DocsBody className={description ? 'mt-8' : 'mt-6'}>
+          <div className="not-prose">{children}</div>
         </DocsBody>
       </div>
     </DocsPage>

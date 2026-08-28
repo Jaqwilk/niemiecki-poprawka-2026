@@ -1,4 +1,3 @@
-import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { PracticeView } from '@/components/study/practice-view';
 
@@ -8,9 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function PracticePage() {
-  return (
-    <Suspense fallback={null}>
-      <PracticeView />
-    </Suspense>
-  );
+  return <PracticeView />;
 }

@@ -1,10 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Bot, CornerDownLeft, LoaderCircle, Send, Sparkles, X } from 'lucide-react';
 import { useStudyState } from './state-provider';
-import { EditModePanel } from './edit-mode-panel';
+
+const EditModePanel = lazy(() =>
+  import('./edit-mode-panel').then((module) => ({ default: module.EditModePanel })),
+);
 
 type SelectionContext = {
   selectedText: string;
@@ -218,10 +221,7 @@ export function StudyTutor() {
             aria-label="Korepetytor AI"
           >
             <header className="flex items-center justify-between border-b border-fd-border px-4 py-3">
-              <div>
-                <p className="text-sm font-semibold">Prywatny tutor</p>
-                <p className="mt-0.5 text-[11px] text-fd-muted-foreground">Momente A1.2 · Lektion 13–18</p>
-              </div>
+              <p className="text-sm font-semibold">Prywatny tutor</p>
               <button type="button" onClick={close} className="grid size-9 place-items-center rounded-md hover:bg-fd-muted" aria-label="Zamknij">
                 <X className="size-4" aria-hidden="true" />
               </button>
@@ -249,7 +249,15 @@ export function StudyTutor() {
             </div>
 
             {mode === 'edit' ? (
-              <EditModePanel />
+              <Suspense
+                fallback={
+                  <div className="flex-1 p-4 text-xs text-fd-muted-foreground" role="status">
+                    Wczytuję Edit Mode…
+                  </div>
+                }
+              >
+                <EditModePanel />
+              </Suspense>
             ) : (
               <>
                 <div className="flex-1 overflow-y-auto px-4 py-5">
@@ -283,8 +291,7 @@ export function StudyTutor() {
                   {messages.length === 0 ? (
                     <div className="py-8 text-center">
                       <Bot className="mx-auto size-5 text-fd-muted-foreground" aria-hidden="true" />
-                      <p className="mt-3 text-sm font-medium">Zapytaj krótko i konkretnie.</p>
-                      <p className="mx-auto mt-2 max-w-xs text-xs leading-5 text-fd-muted-foreground">
+                      <p className="mx-auto mt-3 max-w-xs text-xs leading-5 text-fd-muted-foreground">
                         Na przykład: „Dlaczego mit meinem?”, „Wyjaśnij sollen” albo „Przetestuj mnie z L16”.
                       </p>
                     </div>

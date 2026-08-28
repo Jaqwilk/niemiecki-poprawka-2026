@@ -4,7 +4,7 @@ import { source } from '@/lib/source';
 
 export default function Layout({ children }: LayoutProps<'/'>) {
   return (
-    <DocsLayout tree={source.getPageTree()} {...baseOptions()}>
+    <DocsLayout tree={source.getPageTree()} {...baseOptions()} sidebar={{ prefetch: false }}>
       {children}
     </DocsLayout>
   );

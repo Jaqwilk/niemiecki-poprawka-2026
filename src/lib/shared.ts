@@ -1,4 +1,4 @@
-export const appName = 'Deutsch';
+export const appName = 'Poprawka A1.2';
 export const docsRoute = '/docs';
 export const docsImageRoute = '/og/docs';
 export const docsContentRoute = '/llms.mdx/docs';

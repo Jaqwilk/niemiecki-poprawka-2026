@@ -70,7 +70,6 @@ export function MistakesView() {
 
   return (
     <StudyPageShell
-      eyebrow="Poprawa z pamięci"
       title="Moje błędy"
       description="Błąd jest zamknięty dopiero po poprawnej odpowiedzi w ponownej próbie."
     >

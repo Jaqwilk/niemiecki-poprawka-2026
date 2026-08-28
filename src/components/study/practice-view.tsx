@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Play, Sparkles } from 'lucide-react';
 import { Callout } from 'fumadocs-ui/components/callout';
@@ -13,14 +13,25 @@ import { StudyPageShell } from './page-shell';
 import { QuestionRunner } from './question-runner';
 import { useStudyState } from './state-provider';
 
-export function PracticeView() {
+function PracticeScopeFromUrl({ onScopeChange }: { onScopeChange: (scope: string) => void }) {
   const searchParams = useSearchParams();
-  const requestedLesson = Number(searchParams.get('lesson'));
-  const initialScope = LESSONS.includes(requestedLesson as LessonNumber)
-    ? String(requestedLesson)
-    : 'recommended';
+  const lessonParam = searchParams.get('lesson');
+
+  useEffect(() => {
+    const requestedLesson = Number(lessonParam);
+    onScopeChange(
+      LESSONS.includes(requestedLesson as LessonNumber)
+        ? String(requestedLesson)
+        : 'recommended',
+    );
+  }, [lessonParam, onScopeChange]);
+
+  return null;
+}
+
+export function PracticeView() {
   const { state, hydrated } = useStudyState();
-  const [scope, setScope] = useState(initialScope);
+  const [scope, setScope] = useState('recommended');
   const [session, setSession] = useState<StudyQuestion[] | null>(null);
   const openMistakes = state.mistakes.filter((mistake) => mistake.status === 'open');
   const activeDay = sprintDays[state.activeDay - 1];
@@ -32,7 +43,7 @@ export function PracticeView() {
 
   const previewDescription =
     scope === 'recommended'
-      ? 'Kolejność dopasowuje się do zapisanych pomyłek, bieżącego dnia planu i ostatnich odpowiedzi.'
+      ? null
       : scope === 'mixed'
         ? 'Równy trening ze wszystkich sześciu lekcji — dobry przed próbą generalną.'
         : `Pełny zestaw pytań tylko z Lektion ${scope}.`;
@@ -50,11 +61,14 @@ export function PracticeView() {
   }
 
   return (
-    <StudyPageShell
-      eyebrow="Aktywne przypominanie"
-      title="Ćwiczenia"
-      description="Jedna mieszana seria. Zła odpowiedź nie znika, dopóki nie odtworzysz jej poprawnie."
-    >
+    <>
+      <Suspense fallback={null}>
+        <PracticeScopeFromUrl onScopeChange={setScope} />
+      </Suspense>
+      <StudyPageShell
+        title="Ćwiczenia"
+        description="Błędna odpowiedź wraca, dopóki nie odtworzysz jej poprawnie."
+      >
       {session ? (
         <QuestionRunner
           questions={session}
@@ -105,18 +119,17 @@ export function PracticeView() {
           </fieldset>
 
           <div className="mt-9 border-y border-fd-border py-6">
-            <p className="text-xs font-semibold tracking-[0.14em] text-fd-muted-foreground uppercase">
-              {scope === 'recommended' ? 'Rekomendowana praktyka' : 'Wybrana seria'}
-            </p>
-            <p className="mt-2 text-2xl font-semibold">{previewCount} pytań</p>
+            <p className="text-2xl font-semibold">{previewCount} pytań</p>
             <p className="mt-1 text-sm text-fd-muted-foreground">około {Math.max(6, Math.round(previewCount * 0.7))} min</p>
-            <p className="mt-4 max-w-lg text-sm leading-6 text-fd-muted-foreground">{previewDescription}</p>
+            {previewDescription ? (
+              <p className="mt-4 max-w-lg text-sm leading-6 text-fd-muted-foreground">{previewDescription}</p>
+            ) : null}
           </div>
 
           {scope === 'recommended' ? (
             <Callout
               type="idea"
-              title="Dlaczego taki zestaw?"
+              title="Dobór pytań"
               className="mt-6"
               icon={<Sparkles className="size-5 text-fd-primary" aria-hidden="true" />}
             >
@@ -143,6 +156,7 @@ export function PracticeView() {
           </button>
         </section>
       )}
-    </StudyPageShell>
+      </StudyPageShell>
+    </>
   );
 }

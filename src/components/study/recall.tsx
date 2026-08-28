@@ -28,10 +28,7 @@ export function Recall({ prompt, answer, hint }: RecallProps) {
 
   return (
     <section className="not-prose my-7 border-l-2 border-fd-primary/70 pl-4">
-      <p className="text-[11px] font-semibold tracking-[0.14em] text-fd-muted-foreground uppercase">
-        Przypomnij sobie
-      </p>
-      <label htmlFor={id} className="mt-2 block text-sm font-medium leading-6 text-fd-foreground">
+      <label htmlFor={id} className="block text-sm font-medium leading-6 text-fd-foreground">
         {prompt}
       </label>
       {hint && status === 'idle' ? (
