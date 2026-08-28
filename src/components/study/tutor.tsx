@@ -2,7 +2,7 @@
 
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Bot, CornerDownLeft, LoaderCircle, Send, Sparkles, X } from 'lucide-react';
+import { Bot, CornerDownLeft, Send, Sparkles, Square, Trash2, X } from 'lucide-react';
 import { useStudyState } from './state-provider';
 
 const EditModePanel = lazy(() =>
@@ -32,6 +32,26 @@ function inferLesson(pathname: string) {
   return match ? Number(match[1]) : null;
 }
 
+function TutorMessageText({ text }: { text: string }) {
+  return (
+    <div className="mt-1 text-sm leading-6">
+      {text.split('\n').map((line, lineIndex) => (
+        <p key={`${lineIndex}-${line.slice(0, 20)}`} className={line ? '' : 'h-3'}>
+          {line.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, partIndex) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={partIndex}>{part.slice(2, -2)}</strong>;
+            }
+            if (part.startsWith('`') && part.endsWith('`')) {
+              return <code key={partIndex} className="rounded bg-fd-muted px-1 py-0.5 text-[0.92em]">{part.slice(1, -1)}</code>;
+            }
+            return part;
+          })}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 function getSelectionContext(pathname: string): { context: SelectionContext; rect: DOMRect } | null {
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
@@ -58,6 +78,7 @@ function getSelectionContext(pathname: string): { context: SelectionContext; rec
 export function StudyTutor() {
   const pathname = usePathname();
   const { state } = useStudyState();
+  const editModeAvailable = process.env.NEXT_PUBLIC_EDIT_MODE_ENABLED === 'true';
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'study' | 'edit'>('study');
   const [selectionContext, setSelectionContext] = useState<SelectionContext>(emptyContext);
@@ -68,11 +89,16 @@ export function StudyTutor() {
   const [error, setError] = useState('');
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => {
     abortRef.current?.abort();
     setOpen(false);
     setLoading(false);
+    setMessages((current) => {
+      const last = current.at(-1);
+      return last?.role === 'assistant' && !last.text ? current.slice(0, -1) : current;
+    });
   }, []);
 
   useEffect(() => {
@@ -131,6 +157,28 @@ export function StudyTutor() {
     if (open && mode === 'study') window.setTimeout(() => inputRef.current?.focus(), 80);
   }, [mode, open]);
 
+  useEffect(() => {
+    if (open && mode === 'study') messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [loading, messages, mode, open]);
+
+  function stopAnswer() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setLoading(false);
+    setMessages((current) => {
+      const last = current.at(-1);
+      return last?.role === 'assistant' && !last.text ? current.slice(0, -1) : current;
+    });
+  }
+
+  function clearConversation() {
+    stopAnswer();
+    setMessages([]);
+    setError('');
+    setQuestion('');
+    window.setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
   async function ask(override?: string) {
     const value = (override ?? question).trim();
     if (!value || loading) return;
@@ -171,10 +219,12 @@ export function StudyTutor() {
       const source = response.headers.get('X-Study-Source') ?? undefined;
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let receivedText = '';
       while (true) {
         const { done, value: chunk } = await reader.read();
         if (done) break;
         const delta = decoder.decode(chunk, { stream: true });
+        receivedText += delta;
         setMessages((current) => {
           const last = current.at(-1);
           return [
@@ -183,11 +233,12 @@ export function StudyTutor() {
           ];
         });
       }
+      if (!receivedText.trim()) throw new Error('Tutor zwrócił pustą odpowiedź. Spróbuj ponownie.');
     } catch (caught) {
       if (controller.signal.aborted) return;
       const message = caught instanceof Error ? caught.message : 'Nie udało się uzyskać odpowiedzi.';
       setError(message);
-      setMessages((current) => current.slice(0, -2));
+      setMessages((current) => (current.at(-1)?.role === 'assistant' ? current.slice(0, -1) : current));
     } finally {
       setLoading(false);
       abortRef.current = null;
@@ -221,32 +272,50 @@ export function StudyTutor() {
             aria-label="Korepetytor AI"
           >
             <header className="flex items-center justify-between border-b border-fd-border px-4 py-3">
-              <p className="text-sm font-semibold">Prywatny tutor</p>
-              <button type="button" onClick={close} className="grid size-9 place-items-center rounded-md hover:bg-fd-muted" aria-label="Zamknij">
-                <X className="size-4" aria-hidden="true" />
-              </button>
+              <div>
+                <p className="text-sm font-semibold">Prywatny tutor</p>
+                <p className="mt-0.5 text-[10px] text-fd-muted-foreground">Momente A1.2 · Lektion 13–18</p>
+              </div>
+              <div className="flex items-center gap-1">
+                {messages.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={clearConversation}
+                    className="grid size-9 place-items-center rounded-md hover:bg-fd-muted"
+                    aria-label="Wyczyść rozmowę"
+                    title="Wyczyść rozmowę"
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                  </button>
+                ) : null}
+                <button type="button" onClick={close} className="grid size-9 place-items-center rounded-md hover:bg-fd-muted" aria-label="Zamknij">
+                  <X className="size-4" aria-hidden="true" />
+                </button>
+              </div>
             </header>
 
-            <div className="flex border-b border-fd-border px-4" role="tablist" aria-label="Tryb tutora">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mode === 'study'}
-                onClick={() => setMode('study')}
-                className="border-b-2 border-transparent px-3 py-2.5 text-xs font-medium text-fd-muted-foreground aria-selected:border-fd-primary aria-selected:text-fd-foreground"
-              >
-                Nauka · tylko odczyt
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={mode === 'edit'}
-                onClick={() => setMode('edit')}
-                className="border-b-2 border-transparent px-3 py-2.5 text-xs font-medium text-fd-muted-foreground aria-selected:border-fd-primary aria-selected:text-fd-foreground"
-              >
-                Edit Mode
-              </button>
-            </div>
+            {editModeAvailable ? (
+              <div className="flex border-b border-fd-border px-4" role="tablist" aria-label="Tryb tutora">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === 'study'}
+                  onClick={() => setMode('study')}
+                  className="border-b-2 border-transparent px-3 py-2.5 text-xs font-medium text-fd-muted-foreground aria-selected:border-fd-primary aria-selected:text-fd-foreground"
+                >
+                  Nauka · tylko odczyt
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === 'edit'}
+                  onClick={() => setMode('edit')}
+                  className="border-b-2 border-transparent px-3 py-2.5 text-xs font-medium text-fd-muted-foreground aria-selected:border-fd-primary aria-selected:text-fd-foreground"
+                >
+                  Edit Mode
+                </button>
+              </div>
+            ) : null}
 
             {mode === 'edit' ? (
               <Suspense
@@ -302,9 +371,7 @@ export function StudyTutor() {
                           <p className="text-[10px] font-semibold tracking-wide text-fd-muted-foreground uppercase">
                             {message.role === 'user' ? 'Ty' : 'Tutor'}
                           </p>
-                          <p className="mt-1 whitespace-pre-wrap text-sm leading-6">
-                            {message.text || (loading && index === messages.length - 1 ? '…' : '')}
-                          </p>
+                          <TutorMessageText text={message.text || (loading && index === messages.length - 1 ? '…' : '')} />
                           {message.role === 'assistant' && message.source && message.text ? (
                             <p className="mt-2 text-[10px] text-fd-muted-foreground">
                               {message.source.includes('file-search') ? 'Źródło: notatki kursu + file search' : 'Źródło: lokalne notatki kursu'}
@@ -315,6 +382,7 @@ export function StudyTutor() {
                     </div>
                   )}
                   {error ? <p className="mt-4 text-xs leading-5 text-red-700 dark:text-red-400">{error}</p> : null}
+                  <div ref={messagesEndRef} aria-hidden="true" />
                 </div>
 
                 <form
@@ -329,6 +397,7 @@ export function StudyTutor() {
                     ref={inputRef}
                     id="tutor-question"
                     rows={3}
+                    maxLength={1200}
                     value={question}
                     disabled={loading}
                     onChange={(event) => setQuestion(event.target.value)}
@@ -343,16 +412,25 @@ export function StudyTutor() {
                   />
                   <div className="mt-2 flex items-center justify-between gap-3">
                     <span className="flex items-center gap-1 text-[10px] text-fd-muted-foreground">
-                      <CornerDownLeft className="size-3" aria-hidden="true" /> Enter wysyła
+                      <CornerDownLeft className="size-3" aria-hidden="true" /> Enter wysyła · {question.length}/1200
                     </span>
-                    <button
-                      type="submit"
-                      disabled={!question.trim() || loading}
-                      className="inline-flex min-h-9 items-center gap-2 rounded-md bg-fd-primary px-3 text-xs font-medium text-fd-primary-foreground disabled:opacity-45"
-                    >
-                      {loading ? <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" /> : <Send className="size-3.5" aria-hidden="true" />}
-                      Wyślij
-                    </button>
+                    {loading ? (
+                      <button
+                        type="button"
+                        onClick={stopAnswer}
+                        className="inline-flex min-h-9 items-center gap-2 rounded-md border border-fd-border px-3 text-xs font-medium hover:bg-fd-muted"
+                      >
+                        <Square className="size-3" aria-hidden="true" /> Zatrzymaj
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        disabled={!question.trim()}
+                        className="inline-flex min-h-9 items-center gap-2 rounded-md bg-fd-primary px-3 text-xs font-medium text-fd-primary-foreground disabled:opacity-45"
+                      >
+                        <Send className="size-3.5" aria-hidden="true" /> Wyślij
+                      </button>
+                    )}
                   </div>
                 </form>
               </>

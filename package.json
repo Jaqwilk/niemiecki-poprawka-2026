@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "build:hostinger": "node scripts/build-hostinger.mjs",
     "dev": "next dev",
     "start": "next start",
     "check": "npm run lint && npm run types:check && npm run build",

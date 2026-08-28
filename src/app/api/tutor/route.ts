@@ -3,6 +3,7 @@ import { getOpenAIConfig } from '@/lib/ai/openai.server';
 import { STUDY_TUTOR_SYSTEM_PROMPT } from '@/lib/ai/prompt';
 import { retrieveLocalStudyContext } from '@/lib/ai/retrieval.server';
 import { classifyTutorTask } from '@/lib/ai/model-router';
+import { cleanTutorText, inferTutorLesson, sanitizeTutorHistory } from '@/lib/ai/tutor-input';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,11 +21,53 @@ type TutorRequest = {
   history?: unknown;
 };
 
-function text(value: unknown, maxLength: number) {
-  return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
+const RATE_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT = 30;
+const requestBuckets = new Map<string, number[]>();
+
+function clientKey(request: Request) {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip')?.trim() ||
+    'unknown'
+  );
+}
+
+function isRateLimited(request: Request) {
+  const now = Date.now();
+  const key = clientKey(request);
+  const recent = (requestBuckets.get(key) ?? []).filter((timestamp) => now - timestamp < RATE_WINDOW_MS);
+  if (recent.length >= RATE_LIMIT) return true;
+  recent.push(now);
+  requestBuckets.set(key, recent);
+  return false;
+}
+
+function hasValidOrigin(request: Request) {
+  const origin = request.headers.get('origin');
+  if (!origin) return true;
+  try {
+    return new URL(origin).host === new URL(request.url).host;
+  } catch {
+    return false;
+  }
 }
 
 export async function POST(request: Request) {
+  const contentLength = Number(request.headers.get('content-length') ?? 0);
+  if (contentLength > 64_000) {
+    return Response.json({ error: 'Żądanie jest zbyt duże.' }, { status: 413 });
+  }
+  if (!hasValidOrigin(request)) {
+    return Response.json({ error: 'Niedozwolone źródło żądania.' }, { status: 403 });
+  }
+  if (isRateLimited(request)) {
+    return Response.json(
+      { error: 'Za dużo pytań w krótkim czasie. Spróbuj ponownie za kilka minut.' },
+      { status: 429, headers: { 'Retry-After': '120' } },
+    );
+  }
+
   let body: TutorRequest;
   try {
     body = (await request.json()) as TutorRequest;
@@ -32,7 +75,7 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Nieprawidłowe dane żądania.' }, { status: 400 });
   }
 
-  const question = text(body.question, 1200);
+  const question = cleanTutorText(body.question, 1200);
   if (question.length < 2) return Response.json({ error: 'Wpisz pytanie.' }, { status: 400 });
   const config = getOpenAIConfig(classifyTutorTask(question), question);
   if (!config) {
@@ -42,32 +85,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const selectedText = text(body.context?.selectedText, 1800);
-  const surroundingText = text(body.context?.surroundingText, 2200);
-  const heading = text(body.context?.heading, 180);
-  const route = text(body.context?.route, 220);
-  const lessonValue = Number(body.context?.lesson);
-  const lesson = Number.isInteger(lessonValue) && lessonValue >= 13 && lessonValue <= 18 ? lessonValue : null;
+  const selectedText = cleanTutorText(body.context?.selectedText, 1800);
+  const surroundingText = cleanTutorText(body.context?.surroundingText, 2200);
+  const heading = cleanTutorText(body.context?.heading, 180);
+  const route = cleanTutorText(body.context?.route, 220);
+  const lesson = inferTutorLesson(question, body.context?.lesson);
   const weakTopics = Array.isArray(body.context?.weakTopics)
-    ? body.context.weakTopics.map((item) => text(item, 100)).filter(Boolean).slice(0, 5)
+    ? body.context.weakTopics.map((item) => cleanTutorText(item, 100)).filter(Boolean).slice(0, 5)
     : [];
   const localContext = await retrieveLocalStudyContext(
     `${question} ${selectedText} ${heading}`,
     lesson,
   );
 
-  const historyInput: ResponseInput = Array.isArray(body.history)
-    ? body.history
-        .slice(-6)
-        .map((item) => {
-          if (!item || typeof item !== 'object') return null;
-          const candidate = item as { role?: unknown; text?: unknown };
-          const role = candidate.role === 'assistant' ? 'assistant' : 'user';
-          const content = text(candidate.text, 1200);
-          return content ? { role, content } : null;
-        })
-        .filter((item): item is { role: 'user' | 'assistant'; content: string } => item !== null)
-    : [];
+  const historyInput: ResponseInput = sanitizeTutorHistory(body.history);
 
   const contextBlock = [
     lesson ? `Bieżąca lekcja: Lektion ${lesson}` : '',
@@ -92,6 +123,7 @@ export async function POST(request: Request) {
         ? [{ type: 'file_search', vector_store_ids: [config.vectorStoreId], max_num_results: 6 }]
         : undefined,
       text: { verbosity: 'low' },
+      max_output_tokens: 700,
       stream: true,
     });
 
@@ -120,7 +152,14 @@ export async function POST(request: Request) {
         'X-Model-Tier': config.route.tier,
       },
     });
-  } catch {
+  } catch (caught) {
+    const status = typeof caught === 'object' && caught && 'status' in caught ? Number(caught.status) : 0;
+    if (status === 429) {
+      return Response.json(
+        { error: 'Limit OpenAI został chwilowo osiągnięty. Spróbuj ponownie za moment.' },
+        { status: 429, headers: { 'Retry-After': '30' } },
+      );
+    }
     return Response.json(
       { error: 'Nie udało się uruchomić tutora. Sprawdź konfigurację serwera i spróbuj ponownie.' },
       { status: 502 },
