@@ -1,7 +1,14 @@
 export const LESSONS = [13, 14, 15, 16, 17, 18] as const;
 
 export type LessonNumber = (typeof LESSONS)[number];
-export type StudySkill = 'vocabulary' | 'grammar' | 'reading' | 'writing' | 'speaking' | 'communication';
+export type StudySkill =
+  | 'vocabulary'
+  | 'grammar'
+  | 'listening'
+  | 'reading'
+  | 'writing'
+  | 'speaking'
+  | 'communication';
 export type QuestionKind =
   | 'choice'
   | 'true-false'
@@ -18,6 +25,8 @@ export type StudyQuestion = {
   kind: QuestionKind;
   prompt: string;
   instruction?: string;
+  hint?: string;
+  audioText?: string;
   options?: string[];
   tokens?: string[];
   acceptedAnswers: string[];

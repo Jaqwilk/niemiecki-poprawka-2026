@@ -25,7 +25,7 @@ W pełnym PDF numer strony pliku jest o 2 większy od numeru drukowanego. Poniż
 - **Komunikacja:** polecanie miejsca, pytanie o opinię, ocenianie, reagowanie na propozycję.
 - **Produkcja:** krótki opis wycieczki, zdjęcia albo miasta; wiadomość/e-mail z rekomendacją.
 - **Ćwiczenia:** podpisywanie miejsc, uzupełnianie luk, wybór formy w Akkusativie, dopasowanie osoby w Dativie, krótka wypowiedź pisemna.
-- **Źródło główne:** PDF 8–12 / druk 6–10.
+- **Źródło główne:** PDF 8–11 / druk 6–9.
 - **Uzupełnienie nauczyciela:** `GiE 31032026.pdf` — `helfen + Dativ`, pokazywanie komuś miasta, mieszkanie i podstawowe reakcje zgody/niezgody.
 
 ### Lektion 14 — Vor dem Kaufhaus nach rechts
@@ -36,7 +36,7 @@ W pełnym PDF numer strony pliku jest o 2 większy od numeru drukowanego. Poniż
 - **Komunikacja:** pytanie o drogę, podawanie etapów trasy, upewnianie się, grzeczna odmowa pomocy.
 - **Produkcja:** instrukcja dojścia od punktu A do B, dialog przechodzień–pytający.
 - **Ćwiczenia:** praca z mapą, wybór przyimka, uzupełnianie końcówek Dativu, ustawianie etapów drogi w kolejności, dialog.
-- **Źródło główne:** PDF 13–16 / druk 11–14.
+- **Źródło główne:** PDF 12–15 / druk 10–13.
 
 ### Lektion 15 — Ich finde ihr Zimmer schön
 
@@ -46,7 +46,7 @@ W pełnym PDF numer strony pliku jest o 2 większy od numeru drukowanego. Poniż
 - **Komunikacja:** ocenianie pokoju i mieszkania, pytanie o ofertę, podawanie danych o lokalu.
 - **Produkcja:** krótki opis pokoju; wiadomość w sprawie ogłoszenia mieszkaniowego.
 - **Ćwiczenia:** etykiety na planie domu, kolokacje, wybór `sein/ihr`, czytanie ogłoszeń, odpowiedzi do pytań o mieszkanie.
-- **Źródło główne:** PDF 17–19 / druk 15–17.
+- **Źródło główne:** PDF 16–19 / druk 14–17.
 - **Powtórka modułu:** PDF 20–21 / druk 18–19.
 
 ### Lektion 16 — Wir haben hier ein Problem

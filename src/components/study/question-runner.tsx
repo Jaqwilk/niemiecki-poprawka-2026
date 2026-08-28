@@ -6,6 +6,7 @@ import { ArrowRight, RotateCcw } from 'lucide-react';
 import { Callout } from 'fumadocs-ui/components/callout';
 import type { StudyQuestion } from '@/lib/study/types';
 import { cn } from '@/lib/cn';
+import { AudioPrompt } from './audio-prompt';
 import { useStudyState } from './state-provider';
 
 type SessionResult = { questionId: string; firstTryCorrect: boolean };
@@ -30,6 +31,7 @@ export function QuestionRunner({
   const [answer, setAnswer] = useState('');
   const [selectedTokens, setSelectedTokens] = useState<number[]>([]);
   const [status, setStatus] = useState<'idle' | 'wrong' | 'retry' | 'correct'>('idle');
+  const [wrongCount, setWrongCount] = useState(0);
   const [wrongAnswer, setWrongAnswer] = useState('');
   const [results, setResults] = useState<SessionResult[]>([]);
   const question = questions[index];
@@ -111,6 +113,7 @@ export function QuestionRunner({
       }
     } else {
       setWrongAnswer(composedAnswer);
+      setWrongCount((current) => current + 1);
       setStatus('wrong');
     }
   }
@@ -127,6 +130,7 @@ export function QuestionRunner({
     setAnswer('');
     setSelectedTokens([]);
     setStatus('idle');
+    setWrongCount(0);
     setWrongAnswer('');
     setIndex(nextIndex);
     if (nextIndex >= questions.length) {
@@ -175,6 +179,7 @@ export function QuestionRunner({
       </div>
 
       <div className="mt-9">
+        {question.audioText ? <AudioPrompt text={question.audioText} /> : null}
         {question.instruction ? <p className="mb-2 text-sm text-fd-muted-foreground">{question.instruction}</p> : null}
         <h2 id="question-title" className="whitespace-pre-line text-xl font-semibold leading-8 tracking-tight">
           {question.prompt}
@@ -251,7 +256,18 @@ export function QuestionRunner({
       </div>
 
       {status === 'wrong' ? (
-        <Callout type="error" title="Jeszcze nie" className="mt-7" role="alert">
+        <Callout
+          type="error"
+          title={wrongCount === 1 ? 'Jeszcze nie — najpierw wskazówka' : 'Jeszcze nie — sprawdź rozwiązanie'}
+          className="mt-7"
+          role="alert"
+        >
+          {wrongCount === 1 ? (
+            <div className="mt-3 text-sm leading-6">
+              <p className="font-medium">{question.hint ?? `Zwróć uwagę na zagadnienie: ${question.topic}.`}</p>
+              <p className="mt-1 text-fd-muted-foreground">Spróbuj jeszcze raz bez podglądania pełnej odpowiedzi.</p>
+            </div>
+          ) : (
           <dl className="mt-4 grid gap-3 text-sm">
             <div>
               <dt className="text-fd-muted-foreground">Twoja odpowiedź</dt>
@@ -266,6 +282,7 @@ export function QuestionRunner({
               <dd className="mt-1 max-w-2xl leading-6">{question.explanation}</dd>
             </div>
           </dl>
+          )}
           <button
             type="button"
             onClick={retry}

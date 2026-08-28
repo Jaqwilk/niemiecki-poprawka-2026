@@ -121,6 +121,9 @@ export function StudyDashboard() {
             </div>
           </dl>
         </div>
+        <p className="mt-3 max-w-2xl text-xs leading-5 text-fd-muted-foreground">
+          To minimalne bloki pracy, nie obietnica ukończenia dwóch pełnych lekcji w podanym czasie. Jeśli materiał nie jest pewny, dokończ lekcję przed przejściem dalej.
+        </p>
 
         <Callout type="idea" title="Cel dnia" className="mt-6">
           <ul className="grid gap-1 sm:grid-cols-3">
@@ -177,7 +180,7 @@ export function StudyDashboard() {
             description={
               lastMock
                 ? `Ostatni wynik: ${lastMock.score}/${lastMock.maxScore}.`
-                : '20 zadań zamkniętych oraz pisanie i mówienie.'
+                : '20 zadań zamkniętych oraz 6 zadań pisemnych i ustnych.'
             }
           />
         </Cards>

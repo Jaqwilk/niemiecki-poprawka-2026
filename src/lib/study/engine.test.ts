@@ -28,6 +28,26 @@ describe('answer normalization', () => {
     expect(normalizeAnswer('  MEINEM   Freund! ')).toBe('meinem freund');
   });
 
+  it('accepts harmless punctuation and German keyboard substitutions', () => {
+    const cityQuestion = {
+      ...question,
+      acceptedAnswers: ['Grüße, aus Köln'],
+      correctAnswer: 'Grüße, aus Köln.',
+    };
+    expect(isCorrectAnswer(cityQuestion, 'gruesse aus koeln!')).toBe(true);
+    expect(normalizeAnswer('groß')).toBe(normalizeAnswer('gross'));
+  });
+
+  it('treats spaced slash values as alternatives instead of one required phrase', () => {
+    const professionQuestion = {
+      ...question,
+      acceptedAnswers: ['der Arzt / die Ärztin'],
+      correctAnswer: 'der Arzt / die Ärztin',
+    };
+    expect(isCorrectAnswer(professionQuestion, 'der Arzt')).toBe(true);
+    expect(isCorrectAnswer(professionQuestion, 'die Aerztin')).toBe(true);
+  });
+
   it('does not hide a wrong grammatical ending', () => {
     expect(isCorrectAnswer(question, 'meinem.')).toBe(true);
     expect(isCorrectAnswer(question, 'meinen')).toBe(false);

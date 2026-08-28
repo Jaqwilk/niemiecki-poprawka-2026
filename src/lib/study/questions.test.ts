@@ -3,9 +3,21 @@ import { isCorrectAnswer } from './engine';
 import { studyQuestions } from './questions';
 
 describe('source-grounded question bank', () => {
-  it('contains ten questions for every lesson from 13 through 18', () => {
+  it('contains thirteen questions for every lesson from 13 through 18', () => {
     for (let lesson = 13; lesson <= 18; lesson += 1) {
-      expect(studyQuestions.filter((question) => question.lesson === lesson)).toHaveLength(10);
+      expect(studyQuestions.filter((question) => question.lesson === lesson)).toHaveLength(13);
+    }
+  });
+
+  it('keeps grammar below 40% and includes listening, reading and writing in every lesson', () => {
+    const grammarCount = studyQuestions.filter((question) => question.skill === 'grammar').length;
+    expect(grammarCount / studyQuestions.length).toBeLessThanOrEqual(0.4);
+
+    for (let lesson = 13; lesson <= 18; lesson += 1) {
+      const lessonQuestions = studyQuestions.filter((question) => question.lesson === lesson);
+      expect(lessonQuestions.some((question) => question.skill === 'listening')).toBe(true);
+      expect(lessonQuestions.some((question) => question.skill === 'reading')).toBe(true);
+      expect(lessonQuestions.some((question) => question.skill === 'writing')).toBe(true);
     }
   });
 

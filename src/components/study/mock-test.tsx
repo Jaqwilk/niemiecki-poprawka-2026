@@ -1,35 +1,115 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Check, ClipboardCheck, Save } from 'lucide-react';
 import { Accordion, Accordions } from 'fumadocs-ui/components/accordion';
 import { Callout } from 'fumadocs-ui/components/callout';
 import { cn } from '@/lib/cn';
 import { isCorrectAnswer } from '@/lib/study/engine';
-import { mockQuestions, openMockTasks } from '@/lib/study/mock';
+import { mockQuestions, openMockTasks, type OpenMockTask } from '@/lib/study/mock';
 import type { MockAttempt, StudyQuestion, StudySkill } from '@/lib/study/types';
+import { AudioPrompt } from './audio-prompt';
 import { StudyPageShell } from './page-shell';
+import { RouteMap } from './index';
 import { useStudyState } from './state-provider';
+import { VoiceRecorder } from './voice-recorder';
 
-const DRAFT_KEY = 'deutsch-a1-2-mock-draft-v1';
+const DRAFT_KEY = 'deutsch-a1-2-mock-draft-v2';
+
+type ExamSection = 'listening' | 'reading' | 'writing' | 'speaking' | 'language';
 
 type MockDraft = {
   index: number;
   answers: Record<string, string>;
   openAnswers: Record<string, string>;
+  completedOpen: Record<string, boolean>;
 };
 
-const emptyDraft: MockDraft = { index: 0, answers: {}, openAnswers: {} };
+const emptyDraft: MockDraft = { index: 0, answers: {}, openAnswers: {}, completedOpen: {} };
 
 const skillLabels: Record<StudySkill, string> = {
   vocabulary: 'słownictwo',
   grammar: 'gramatyka',
+  listening: 'słuchanie',
   reading: 'czytanie',
   writing: 'pisanie',
   speaking: 'mówienie',
   communication: 'komunikacja',
 };
+
+const sectionLabels: Record<ExamSection, string> = {
+  listening: 'Słuchanie',
+  reading: 'Czytanie',
+  writing: 'Pisanie',
+  speaking: 'Mówienie',
+  language: 'Gramatyka i słownictwo',
+};
+
+function getExamSection(question: StudyQuestion): ExamSection {
+  if (question.skill === 'listening') return 'listening';
+  if (question.skill === 'reading') return 'reading';
+  return 'language';
+}
+
+function OpenTaskVisual({ task }: { task: OpenMockTask }) {
+  if (task.visual === 'map') return <RouteMap />;
+  if (task.visual === 'photo') {
+    return (
+      <figure className="mt-5 overflow-hidden rounded-xl border border-fd-border bg-fd-card">
+        <Image
+          src="/exam/office-health.svg"
+          alt="Mężczyzna wykonuje ćwiczenia w biurze, a kobieta obserwuje go przy biurku."
+          width={960}
+          height={600}
+          className="h-auto w-full"
+        />
+        <figcaption className="border-t border-fd-border px-4 py-3 text-xs text-fd-muted-foreground">
+          Ilustracja egzaminacyjna — najpierw opisz to, co naprawdę widzisz, później dodaj przypuszczenie.
+        </figcaption>
+      </figure>
+    );
+  }
+  if (task.visual === 'calendar') {
+    return (
+      <div className="mt-5 overflow-hidden rounded-xl border border-fd-border">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-fd-muted/60 text-xs text-fd-muted-foreground">
+            <tr><th className="px-4 py-3 font-medium">Dzień</th><th className="px-4 py-3 font-medium">Kalendarz</th></tr>
+          </thead>
+          <tbody className="divide-y divide-fd-border">
+            <tr><td className="px-4 py-3 font-medium">Dienstag</td><td className="px-4 py-3">10:00 Zahnarzt · termin do zmiany</td></tr>
+            <tr><td className="px-4 py-3 font-medium">Mittwoch</td><td className="px-4 py-3">ganztägig Kurs</td></tr>
+            <tr><td className="px-4 py-3 font-medium">Donnerstag</td><td className="px-4 py-3">ab 14:00 frei</td></tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+  if (task.visual === 'card') {
+    return (
+      <div className="mt-5 rounded-xl border border-fd-primary/30 bg-fd-primary/6 p-5 text-sm">
+        <p className="text-xs font-semibold tracking-wide text-fd-muted-foreground uppercase">Karta ucznia</p>
+        <ul className="mt-3 list-disc space-y-1 pl-5 leading-6">
+          <li>seit zwei Wochen schlecht schlafen</li>
+          <li>tagsüber müde sein</li>
+          <li>abends drei koffeinhaltige Getränke trinken</li>
+          <li>um Rat bitten und Empfehlung wiederholen</li>
+        </ul>
+      </div>
+    );
+  }
+  if (task.visual === 'apartment') {
+    return (
+      <div className="mt-5 rounded-xl border border-fd-border bg-fd-card p-5 text-sm leading-7">
+        <p className="font-semibold">WG-Zimmer im Zentrum</p>
+        <p className="mt-1 text-fd-muted-foreground">18 m² · möbliert · Balkon · 490 Euro inkl. NK</p>
+      </div>
+    );
+  }
+  return null;
+}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('pl-PL', {
@@ -51,6 +131,8 @@ function normalizeDraft(value: unknown): MockDraft | null {
     answers: draft.answers && typeof draft.answers === 'object' ? draft.answers : {},
     openAnswers:
       draft.openAnswers && typeof draft.openAnswers === 'object' ? draft.openAnswers : {},
+    completedOpen:
+      draft.completedOpen && typeof draft.completedOpen === 'object' ? draft.completedOpen : {},
   };
 }
 
@@ -60,6 +142,7 @@ export function MockTest() {
   const [resumed, setResumed] = useState(false);
   const [draft, setDraft] = useState<MockDraft>(emptyDraft);
   const [result, setResult] = useState<MockAttempt | null>(null);
+  const [rubricChecks, setRubricChecks] = useState<Record<string, number[]>>({});
 
   useEffect(() => {
     let timer: number | undefined;
@@ -104,11 +187,28 @@ export function MockTest() {
     return [...grouped.entries()].map(([lesson, score]) => ({ lesson, ...score }));
   }, [result]);
 
+  const objectiveSectionScores = useMemo(() => {
+    const grouped = new Map<ExamSection, { correct: number; total: number }>();
+    if (!result) return grouped;
+    for (const item of result.answers) {
+      const itemQuestion = mockQuestions.find((candidate) => candidate.id === item.questionId);
+      if (!itemQuestion) continue;
+      const section = getExamSection(itemQuestion);
+      const score = grouped.get(section) ?? { correct: 0, total: 0 };
+      score.total += 1;
+      if (item.correct) score.correct += 1;
+      grouped.set(section, score);
+    }
+    return grouped;
+  }, [result]);
+
   const answeredCount = mockQuestions.filter(
     (question) => (draft.answers[question.id] ?? '').trim().length > 0,
   ).length;
-  const openAnsweredCount = openMockTasks.filter(
-    (task) => (draft.openAnswers[task.id] ?? '').trim().length > 0,
+  const openAnsweredCount = openMockTasks.filter((task) =>
+    task.section === 'writing'
+      ? (draft.openAnswers[task.id] ?? '').trim().length > 0
+      : draft.completedOpen[task.id],
   ).length;
   const allComplete =
     answeredCount === mockQuestions.length && openAnsweredCount === openMockTasks.length;
@@ -167,13 +267,43 @@ export function MockTest() {
     window.localStorage.removeItem(DRAFT_KEY);
     setDraft(emptyDraft);
     setResult(null);
+    setRubricChecks({});
     setResumed(false);
     setStarted(false);
+  }
+
+  function toggleRubric(taskId: string, criterionIndex: number) {
+    setRubricChecks((current) => {
+      const selected = current[taskId] ?? [];
+      const next = selected.includes(criterionIndex)
+        ? selected.filter((index) => index !== criterionIndex)
+        : [...selected, criterionIndex];
+      return { ...current, [taskId]: next };
+    });
   }
 
   if (result) {
     const incorrect = result.answers.filter((answer) => !answer.correct);
     const scorePercent = Math.round((result.score / result.maxScore) * 100);
+    const openSectionScore = (section: 'writing' | 'speaking') => {
+      const tasks = openMockTasks.filter((task) => task.section === section);
+      return {
+        correct: tasks.reduce((sum, task) => sum + (rubricChecks[task.id]?.length ?? 0), 0),
+        total: tasks.reduce((sum, task) => sum + task.checklist.length, 0),
+        touched: tasks.some((task) => Object.hasOwn(rubricChecks, task.id)),
+      };
+    };
+    const writingScore = openSectionScore('writing');
+    const speakingScore = openSectionScore('speaking');
+    const sectionRows = (
+      [
+        ['listening', objectiveSectionScores.get('listening')],
+        ['reading', objectiveSectionScores.get('reading')],
+        ['writing', writingScore],
+        ['speaking', speakingScore],
+        ['language', objectiveSectionScores.get('language')],
+      ] as const
+    );
     return (
       <StudyPageShell
         eyebrow="Wynik próby"
@@ -187,6 +317,38 @@ export function MockTest() {
         >
           Wynik z zadań zamkniętych: {scorePercent}%. Zadania otwarte oceń osobno według checklist poniżej.
         </Callout>
+
+        <section className="mt-10 max-w-3xl" aria-labelledby="skill-result-heading">
+          <h2 id="skill-result-heading" className="text-lg font-semibold">Wynik według sprawności</h2>
+          <p className="mt-2 text-sm leading-6 text-fd-muted-foreground">
+            Pisanie i mówienie uzupełnią się, gdy zaznaczysz kryteria samooceny pod odpowiedziami.
+          </p>
+          <div className="mt-4 divide-y divide-fd-border border-y border-fd-border">
+            {sectionRows.map(([section, score]) => {
+              const isOpen = section === 'writing' || section === 'speaking';
+              const ready = score && (!isOpen || score.touched);
+              const percent = ready && score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
+              return (
+                <div key={section} className="grid items-center gap-3 py-4 sm:grid-cols-[11rem_1fr_auto]">
+                  <span className="text-sm font-medium">{sectionLabels[section]}</span>
+                  <div
+                    className="h-1.5 overflow-hidden rounded-full bg-fd-muted"
+                    role="progressbar"
+                    aria-label={`Wynik: ${sectionLabels[section]}`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={percent}
+                  >
+                    <div className="h-full bg-fd-primary transition-[width]" style={{ width: `${percent}%` }} />
+                  </div>
+                  <span className="min-w-20 text-right text-sm text-fd-muted-foreground">
+                    {ready ? `${score.correct}/${score.total}` : 'oceń niżej'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
 
         <section className="mt-10 max-w-3xl" aria-labelledby="lesson-result-heading">
           <h2 id="lesson-result-heading" className="text-lg font-semibold">Wynik według lekcji</h2>
@@ -261,19 +423,37 @@ export function MockTest() {
 
         <section className="mt-10 max-w-3xl" aria-labelledby="open-feedback-heading">
           <h2 id="open-feedback-heading" className="text-lg font-semibold">Samoocena pisania i mówienia</h2>
+          <p className="mt-2 text-sm leading-6 text-fd-muted-foreground">
+            Porównaj odpowiedź z kryteriami. Zaznacz tylko to, co rzeczywiście pojawiło się w Twojej wypowiedzi.
+          </p>
           <Accordions className="mt-4">
             {openMockTasks.map((task) => (
               <Accordion key={task.id} value={`open-${task.id}`} title={task.label}>
                 <div className="space-y-4 text-sm">
                   <div>
                     <p className="text-xs text-fd-muted-foreground">Twoja odpowiedź</p>
-                    <p className="mt-1 whitespace-pre-wrap leading-6">{draft.openAnswers[task.id] || 'Brak odpowiedzi.'}</p>
+                    <p className="mt-1 whitespace-pre-wrap leading-6">
+                      {draft.openAnswers[task.id]
+                        || (task.section === 'speaking' && draft.completedOpen[task.id]
+                          ? 'Wypowiedź wykonana ustnie — bez zapisanej transkrypcji.'
+                          : 'Brak odpowiedzi.')}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs font-medium">Sprawdź, czy masz:</p>
-                    <ul className="mt-2 list-inside list-disc leading-6 text-fd-muted-foreground">
-                      {task.checklist.map((item) => <li key={item}>{item}</li>)}
-                    </ul>
+                    <p className="text-xs font-medium">Zaznacz spełnione kryteria:</p>
+                    <div className="mt-2 grid gap-2">
+                      {task.checklist.map((item, criterionIndex) => (
+                        <label key={item} className="flex cursor-pointer items-start gap-2 rounded-md border border-fd-border p-3 leading-5 hover:bg-fd-muted/50">
+                          <input
+                            type="checkbox"
+                            checked={(rubricChecks[task.id] ?? []).includes(criterionIndex)}
+                            onChange={() => toggleRubric(task.id, criterionIndex)}
+                            className="mt-0.5 size-4 accent-[var(--color-fd-primary)]"
+                          />
+                          <span>{item}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                   <div>
                     <p className="text-xs text-fd-muted-foreground">Model odpowiedzi</p>
@@ -292,14 +472,12 @@ export function MockTest() {
     const lastAttempt = state.mockAttempts[0];
     return (
       <StudyPageShell
-        eyebrow="Dzień 5"
         title="Próba generalna"
-        description="Formaty pochodzą z oficjalnych stron TEST i Prüfungstraining dla modułów 5 i 6."
       >
         <section className="max-w-2xl">
           <dl className="grid grid-cols-3 gap-5 border-y border-fd-border py-6 text-sm">
-            <div><dt className="text-fd-muted-foreground">Zadania</dt><dd className="mt-1 text-lg font-semibold">20 + 2</dd></div>
-            <div><dt className="text-fd-muted-foreground">Czas</dt><dd className="mt-1 text-lg font-semibold">~35 min</dd></div>
+            <div><dt className="text-fd-muted-foreground">Zadania</dt><dd className="mt-1 text-lg font-semibold">20 + 6</dd></div>
+            <div><dt className="text-fd-muted-foreground">Czas</dt><dd className="mt-1 text-lg font-semibold">~55 min</dd></div>
             <div><dt className="text-fd-muted-foreground">Zakres</dt><dd className="mt-1 text-lg font-semibold">13–18</dd></div>
           </dl>
 
@@ -308,7 +486,8 @@ export function MockTest() {
               <li>Feedback pojawia się dopiero po oddaniu.</li>
               <li>Możesz pomijać zadania i wracać do nich z nawigacji.</li>
               <li>Każda zmiana zapisuje się lokalnie w tej przeglądarce.</li>
-              <li>Do oddania trzeba uzupełnić 20 zadań i 2 odpowiedzi otwarte.</li>
+              <li>Do oddania trzeba uzupełnić 20 zadań oraz 6 zadań pisemnych i ustnych.</li>
+              <li>W mówieniu możesz nagrać odpowiedź albo wykonać ją na głos i zaznaczyć jako gotową.</li>
             </ul>
           </Callout>
 
@@ -404,6 +583,7 @@ export function MockTest() {
       {question ? (
         <section className="mt-9 max-w-2xl" aria-labelledby="mock-question-heading">
           <p className="text-xs text-fd-muted-foreground">Lektion {question.lesson} · {skillLabels[question.skill]}</p>
+          {question.audioText ? <div className="mt-5"><AudioPrompt text={question.audioText} /></div> : null}
           {question.instruction ? <p className="mt-4 text-sm text-fd-muted-foreground">{question.instruction}</p> : null}
           <h2 id="mock-question-heading" className="mt-3 whitespace-pre-line text-xl font-semibold leading-8">{question.prompt}</h2>
           {question.tokens ? <p className="mt-3 text-sm text-fd-muted-foreground">{question.tokens.join(' / ')}</p> : null}
@@ -446,13 +626,22 @@ export function MockTest() {
       ) : (
         <section className="mt-9 max-w-2xl space-y-10">
           {openMockTasks.map((task) => (
-            <div key={task.id}>
-              <h2 className="text-base font-semibold">{task.label}</h2>
+            <div key={task.id} className="border-b border-fd-border pb-10 last:border-b-0">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-base font-semibold">{task.label}</h2>
+                <span className="rounded-md border border-fd-border px-2 py-1 text-[11px] font-medium text-fd-muted-foreground">
+                  {task.section === 'writing' ? 'odpowiedź pisemna' : 'wypowiedź ustna'}
+                </span>
+              </div>
               <p className="mt-3 text-sm leading-6 text-fd-muted-foreground">{task.prompt}</p>
-              <label htmlFor={task.id} className="sr-only">Odpowiedź: {task.label}</label>
+              <OpenTaskVisual task={task} />
+              {task.section === 'speaking' ? <VoiceRecorder /> : null}
+              <label htmlFor={task.id} className="mt-5 block text-xs font-medium text-fd-muted-foreground">
+                {task.section === 'writing' ? 'Twoja odpowiedź' : 'Opcjonalne notatki lub transkrypcja'}
+              </label>
               <textarea
                 id={task.id}
-                rows={6}
+                rows={task.section === 'writing' ? 7 : 3}
                 value={draft.openAnswers[task.id] ?? ''}
                 onChange={(event) =>
                   setDraft((current) => ({
@@ -460,9 +649,28 @@ export function MockTest() {
                     openAnswers: { ...current.openAnswers, [task.id]: event.target.value },
                   }))
                 }
-                className="mt-4 w-full rounded-md border border-fd-border bg-fd-background p-4 text-sm leading-6 outline-none focus:border-fd-primary"
-                placeholder="Zapisz pełną odpowiedź…"
+                className="mt-2 w-full rounded-md border border-fd-border bg-fd-background p-4 text-sm leading-6 outline-none focus:border-fd-primary"
+                placeholder={task.section === 'writing' ? 'Zapisz pełną odpowiedź…' : 'Możesz zanotować najważniejsze zdania…'}
               />
+              {task.section === 'speaking' ? (
+                <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-fd-border p-4 text-sm hover:bg-fd-muted/40">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(draft.completedOpen[task.id])}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        completedOpen: { ...current.completedOpen, [task.id]: event.target.checked },
+                      }))
+                    }
+                    className="mt-0.5 size-4 accent-[var(--color-fd-primary)]"
+                  />
+                  <span>
+                    <strong className="font-medium">Wypowiedź wykonana.</strong>{' '}
+                    <span className="text-fd-muted-foreground">Zaznacz po nagraniu albo odpowiedzi na głos.</span>
+                  </span>
+                </label>
+              ) : null}
             </div>
           ))}
         </section>

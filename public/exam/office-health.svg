@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="title desc">
+  <title id="title">Ćwiczenia w biurze</title>
+  <desc id="desc">Mężczyzna w średnim wieku wykonuje ćwiczenie rozciągające w biurze. Blondwłosa kobieta stoi przy biurku i obserwuje go.</desc>
+  <rect width="960" height="600" fill="#eceae5"/>
+  <rect y="430" width="960" height="170" fill="#d6d0c5"/>
+  <rect x="52" y="62" width="310" height="250" rx="8" fill="#dbe7ea" stroke="#8a9698" stroke-width="8"/>
+  <path d="M207 66v242M56 186h302" stroke="#8a9698" stroke-width="6"/>
+  <rect x="694" y="70" width="205" height="315" rx="8" fill="#6f675e"/>
+  <g fill="#cfc7b8">
+    <rect x="714" y="94" width="165" height="70" rx="4"/>
+    <rect x="714" y="183" width="165" height="70" rx="4"/>
+    <rect x="714" y="272" width="165" height="88" rx="4"/>
+  </g>
+  <g fill="#9b6a54">
+    <rect x="730" y="111" width="26" height="42"/>
+    <rect x="765" y="104" width="20" height="49"/>
+    <rect x="794" y="116" width="31" height="37"/>
+    <rect x="838" y="108" width="24" height="45"/>
+  </g>
+  <rect x="100" y="420" width="390" height="32" rx="6" fill="#786b5c"/>
+  <path d="M142 452v112M448 452v112" stroke="#62584d" stroke-width="18"/>
+  <rect x="135" y="355" width="130" height="70" rx="6" fill="#2f3c47"/>
+  <rect x="147" y="367" width="106" height="45" fill="#abc8cf"/>
+  <rect x="300" y="386" width="42" height="36" rx="4" fill="#c08d56"/>
+  <path d="M304 385c2-19 30-19 33 0" fill="none" stroke="#4d835d" stroke-width="12"/>
+  <g id="woman">
+    <circle cx="390" cy="260" r="48" fill="#edc4a3"/>
+    <path d="M344 267c-7-63 17-91 53-91 43 0 63 31 47 99-10-36-20-54-50-57-28 4-38 22-50 49z" fill="#d2ad4f"/>
+    <path d="M354 317c25-16 58-16 82 0l24 121H330z" fill="#486b7b"/>
+    <path d="M354 333l-51 82M430 333l55 63" fill="none" stroke="#edc4a3" stroke-width="24" stroke-linecap="round"/>
+    <circle cx="485" cy="396" r="14" fill="#edc4a3"/>
+    <path d="M375 260h7M410 260h7" stroke="#423c37" stroke-width="6" stroke-linecap="round"/>
+    <path d="M385 282c10 7 20 7 30 0" fill="none" stroke="#9f5d55" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g id="man">
+    <circle cx="605" cy="265" r="50" fill="#d7a77f"/>
+    <path d="M560 246c6-53 81-62 95 0-28-18-64-18-95 0z" fill="#544b45"/>
+    <path d="M567 321c29-17 65-17 91 0l30 145H535z" fill="#6c7c57"/>
+    <path d="M580 337L480 271M645 337l91-86" fill="none" stroke="#d7a77f" stroke-width="27" stroke-linecap="round"/>
+    <circle cx="477" cy="269" r="16" fill="#d7a77f"/>
+    <circle cx="738" cy="249" r="16" fill="#d7a77f"/>
+    <path d="M579 466l-25 104M653 466l34 104" fill="none" stroke="#3e4d58" stroke-width="31" stroke-linecap="round"/>
+    <path d="M585 263h7M622 263h7" stroke="#423c37" stroke-width="6" stroke-linecap="round"/>
+    <path d="M596 286c10-5 20-5 30 0" fill="none" stroke="#7d4b45" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <rect x="28" y="25" width="282" height="46" rx="23" fill="#ffffff" fill-opacity=".86"/>
+  <text x="52" y="56" font-family="Arial, sans-serif" font-size="22" fill="#3d3a35">Sprechaufgabe · Im Büro</text>
+</svg>

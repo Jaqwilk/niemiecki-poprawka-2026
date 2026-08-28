@@ -6,14 +6,23 @@ export function normalizeAnswer(value: string) {
   return value
     .normalize('NFC')
     .trim()
+    .toLocaleLowerCase('de-DE')
+    .replace(/ä/g, 'ae')
+    .replace(/ö/g, 'oe')
+    .replace(/ü/g, 'ue')
+    .replace(/ß/g, 'ss')
+    .replace(/[.,!?;:„“”‚‘’'"()[\]{}]/g, ' ')
+    .replace(/[–—-]/g, ' ')
     .replace(/\s+/g, ' ')
-    .replace(/[.!?]+$/g, '')
-    .toLocaleLowerCase('de-DE');
+    .trim();
 }
 
 export function isCorrectAnswer(question: StudyQuestion, answer: string) {
   const normalized = normalizeAnswer(answer);
-  return question.acceptedAnswers.some((candidate) => normalizeAnswer(candidate) === normalized);
+  return question.acceptedAnswers.some((candidate) => {
+    const variants = [candidate, ...candidate.split(/\s+\/\s+/).filter(Boolean)];
+    return variants.some((variant) => normalizeAnswer(variant) === normalized);
+  });
 }
 
 export function createInitialState(): StudyState {
