@@ -10,28 +10,36 @@ const inter = Inter({
 
 const extensionAttributeGuard = `
 (() => {
-  const attributes = ['bis_skin_checked', 'bis_register', 'bis_size', 'bis_id'];
-  const selector = attributes.map((attribute) => '[' + attribute + ']').join(',');
+  const isInjectedAttribute = (attribute) =>
+    attribute.startsWith('bis_') ||
+    (attribute.startsWith('__processed_') && attribute.endsWith('__'));
 
   const clean = (node) => {
     if (!(node instanceof Element)) return;
-    for (const attribute of attributes) node.removeAttribute(attribute);
-    for (const element of node.querySelectorAll(selector)) {
-      for (const attribute of attributes) element.removeAttribute(attribute);
+
+    for (const element of [node, ...node.querySelectorAll('*')]) {
+      for (const attribute of [...element.attributes]) {
+        if (isInjectedAttribute(attribute.name)) {
+          element.removeAttribute(attribute.name);
+        }
+      }
     }
   };
 
   clean(document.documentElement);
   new MutationObserver((mutations) => {
     for (const mutation of mutations) {
-      if (mutation.type === 'attributes' && mutation.attributeName) {
+      if (
+        mutation.type === 'attributes' &&
+        mutation.attributeName &&
+        isInjectedAttribute(mutation.attributeName)
+      ) {
         mutation.target.removeAttribute(mutation.attributeName);
       }
       for (const node of mutation.addedNodes) clean(node);
     }
   }).observe(document.documentElement, {
     attributes: true,
-    attributeFilter: attributes,
     childList: true,
     subtree: true,
   });
@@ -57,7 +65,7 @@ export const metadata: Metadata = {
 export default function Layout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="de" className={inter.className} suppressHydrationWarning>
-      <body className="flex flex-col min-h-screen">
+      <body className="flex flex-col min-h-screen" suppressHydrationWarning>
         <RootProvider>{children}</RootProvider>
         <Script
           id="extension-attribute-guard"
