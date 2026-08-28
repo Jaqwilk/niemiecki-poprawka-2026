@@ -1,0 +1,79 @@
+.backdrop {
+  animation: tutor-backdrop-in 180ms ease-out both;
+}
+
+.panel {
+  animation: tutor-panel-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.message {
+  animation: tutor-message-in 180ms ease-out both;
+}
+
+.thinkingGlow {
+  animation: tutor-thinking-glow 1.8s ease-in-out infinite;
+}
+
+.thinkingDot {
+  animation: tutor-thinking-dot 1.2s ease-in-out infinite;
+}
+
+.thinkingDot:nth-child(2) {
+  animation-delay: 140ms;
+}
+
+.thinkingDot:nth-child(3) {
+  animation-delay: 280ms;
+}
+
+.streamingCaret {
+  display: inline-block;
+  width: 0.4rem;
+  height: 1rem;
+  margin-left: 0.18rem;
+  vertical-align: -0.15rem;
+  border-radius: 0.15rem;
+  background: currentColor;
+  animation: tutor-caret 900ms steps(1, end) infinite;
+}
+
+@keyframes tutor-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes tutor-panel-in {
+  from { opacity: 0; transform: translateX(1.25rem); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes tutor-message-in {
+  from { opacity: 0; transform: translateY(0.35rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tutor-thinking-glow {
+  0%, 100% { opacity: 0.45; transform: scale(0.92); }
+  50% { opacity: 0.9; transform: scale(1.08); }
+}
+
+@keyframes tutor-thinking-dot {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-0.18rem); }
+}
+
+@keyframes tutor-caret {
+  0%, 48% { opacity: 0.8; }
+  49%, 100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .panel,
+  .message,
+  .thinkingGlow,
+  .thinkingDot,
+  .streamingCaret {
+    animation: none;
+  }
+}

@@ -124,6 +124,7 @@ export async function POST(request: Request) {
         : undefined,
       text: { verbosity: 'low' },
       max_output_tokens: 700,
+      store: false,
       stream: true,
     });
 
@@ -138,7 +139,7 @@ export async function POST(request: Request) {
           }
           controller.close();
         } catch {
-          controller.enqueue(encoder.encode('\n\nNie udało się dokończyć odpowiedzi. Spróbuj ponownie.'));
+          controller.enqueue(encoder.encode('\n\n> **Nie udało się dokończyć odpowiedzi.** Spróbuj ponownie.'));
           controller.close();
         }
       },
@@ -146,7 +147,7 @@ export async function POST(request: Request) {
 
     return new Response(readable, {
       headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
+        'Content-Type': 'text/markdown; charset=utf-8',
         'Cache-Control': 'no-store',
         'X-Study-Source': config.vectorStoreId ? 'course-notes-and-file-search' : 'course-notes-local',
         'X-Model-Tier': config.route.tier,
