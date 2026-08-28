@@ -29,3 +29,5 @@ next-env.d.ts
 /materials/book/
 /tmp/
 /output/
+/.playwright-cli/
+/.codex-backups/

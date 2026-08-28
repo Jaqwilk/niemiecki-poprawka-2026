@@ -8,6 +8,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+export { Recall } from './recall';
+export { LessonComplete } from './lesson-complete';
 
 type BoxProps = {
   children: ReactNode;
@@ -19,7 +21,7 @@ export function Rule({ children, className, title = 'Regel' }: BoxProps) {
   return (
     <aside
       className={cn(
-        'not-prose my-6 rounded-xl border border-fd-border bg-fd-card p-5 text-sm',
+        'not-prose my-6 border-l-2 border-fd-primary/70 py-1 pl-5 text-sm',
         className,
       )}
     >
@@ -62,7 +64,7 @@ export function Mistake({ wrong, correct, explanation, className }: MistakeProps
   return (
     <aside
       className={cn(
-        'not-prose my-6 overflow-hidden rounded-xl border border-fd-border bg-fd-card',
+        'not-prose my-6 overflow-hidden rounded-lg border border-fd-border',
         className,
       )}
     >
@@ -141,7 +143,7 @@ export function ExamTip({ children, className, title = 'Prüfungstipp' }: BoxPro
   return (
     <aside
       className={cn(
-        'not-prose my-6 rounded-xl border border-fd-primary/25 bg-fd-primary/7 p-5 text-sm',
+        'not-prose my-6 border-l-2 border-fd-primary/70 py-1 pl-5 text-sm',
         className,
       )}
     >
@@ -151,6 +153,19 @@ export function ExamTip({ children, className, title = 'Prüfungstipp' }: BoxPro
       </div>
       <div className="leading-7 text-fd-muted-foreground">{children}</div>
     </aside>
+  );
+}
+
+export function SourceNote({ children, className }: Omit<BoxProps, 'title'>) {
+  return (
+    <footer
+      className={cn(
+        'not-prose mt-12 border-t border-fd-border pt-5 text-xs leading-5 text-fd-muted-foreground',
+        className,
+      )}
+    >
+      {children}
+    </footer>
   );
 }
 

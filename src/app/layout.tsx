@@ -3,6 +3,8 @@ import './global.css';
 import { Inter } from 'next/font/google';
 import type { Metadata } from 'next';
 import Script from 'next/script';
+import { StudyStateProvider } from '@/components/study/state-provider';
+import { StudyTutor } from '@/components/study/tutor';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -66,7 +68,12 @@ export default function Layout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="de" className={inter.className} suppressHydrationWarning>
       <body className="flex flex-col min-h-screen" suppressHydrationWarning>
-        <RootProvider>{children}</RootProvider>
+        <RootProvider>
+          <StudyStateProvider>
+            {children}
+            <StudyTutor />
+          </StudyStateProvider>
+        </RootProvider>
         <Script
           id="extension-attribute-guard"
           strategy="beforeInteractive"

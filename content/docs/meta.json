@@ -1,18 +1,13 @@
 {
-  "title": "Deutsch",
+  "title": "Momente A1.2",
   "pages": [
-    "---START---",
+    "[Gauge][Nauka](/study)",
+    "---MATERIAŁ---",
     "index",
-    "...start",
-    "---GRAMMATIK---",
-    "...grammatik",
-    "---WORTSCHATZ---",
-    "...wortschatz",
-    "---SCHREIBEN---",
-    "...schreiben",
-    "---SPRECHEN---",
-    "...sprechen",
-    "---PRÜFUNG---",
-    "...pruefung"
+    "lessons",
+    "---TRENING---",
+    "[Dumbbell][Ćwiczenia](/practice)",
+    "[RotateCcw][Błędy](/mistakes)",
+    "[ClipboardCheck][Test](/test)"
   ]
 }
