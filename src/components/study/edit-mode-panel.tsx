@@ -88,7 +88,13 @@ export function EditModePanel() {
       </div>
 
       {files.length === 0 ? (
-        <div className="mt-6">
+        <form
+          className="mt-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            unlock();
+          }}
+        >
           <label htmlFor="edit-token" className="text-xs font-medium">Token Edit Mode</label>
           <input
             id="edit-token"
@@ -106,15 +112,14 @@ export function EditModePanel() {
             placeholder="EDIT_MODE_TOKEN"
           />
           <button
-            type="button"
-            onClick={unlock}
+            type="submit"
             disabled={!token.trim() || loading}
             className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-md bg-fd-primary px-3 text-xs font-medium text-fd-primary-foreground disabled:opacity-45"
           >
             {loading ? <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" /> : null}
             Odblokuj
           </button>
-        </div>
+        </form>
       ) : proposal ? (
         <div className="mt-6">
           <p className="flex items-center gap-2 text-xs font-semibold"><FileCode2 className="size-4" aria-hidden="true" /> {proposal.path}</p>

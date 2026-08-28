@@ -54,11 +54,11 @@ export const metadata: Metadata = {
     default: 'Deutsch',
     template: '%s | Deutsch',
   },
-  description: 'Persönlicher Lernbereich für die Deutschprüfung.',
+  description: 'Osobisty plan przygotowania do poprawki z niemieckiego.',
   openGraph: {
     title: 'Deutsch',
-    description: 'Persönlicher Lernbereich für die Deutschprüfung.',
-    locale: 'de_DE',
+    description: 'Osobisty plan przygotowania do poprawki z niemieckiego.',
+    locale: 'pl_PL',
     siteName: 'Deutsch',
     type: 'website',
   },
@@ -66,9 +66,54 @@ export const metadata: Metadata = {
 
 export default function Layout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="de" className={inter.className} suppressHydrationWarning>
+    <html lang="pl" className={inter.className} suppressHydrationWarning>
       <body className="flex flex-col min-h-screen" suppressHydrationWarning>
-        <RootProvider>
+        <RootProvider
+          i18n={{
+            locale: 'pl',
+            translations: {
+              Search: 'Szukaj',
+              'Search(search trigger)': 'Szukaj',
+              'Search(search dialog)': 'Szukaj',
+              'Open Search': 'Otwórz wyszukiwanie',
+              'Open Search(search trigger)(aria-label)': 'Otwórz wyszukiwanie',
+              'Close Search': 'Zamknij wyszukiwanie',
+              'Close Search(search dialog)(aria-label)': 'Zamknij wyszukiwanie',
+              'No results found(search dialog)': 'Brak wyników',
+              'Previous Page': 'Poprzednia strona',
+              'Previous Page(pagination)': 'Poprzednia strona',
+              'Next Page': 'Następna strona',
+              'Next Page(pagination)': 'Następna strona',
+              'On this page': 'Na tej stronie',
+              'On this page(table of contents)': 'Na tej stronie',
+              'Table of Contents': 'Spis treści',
+              'No Headings': 'Brak nagłówków',
+              'No Headings(table of contents)': 'Brak nagłówków',
+              'Open Sidebar': 'Otwórz menu',
+              'Open Sidebar(sidebar)(aria-label)': 'Otwórz menu',
+              'Close Sidebar': 'Zamknij menu',
+              'Close Sidebar(sidebar)(aria-label)': 'Zamknij menu',
+              'Collapse Sidebar': 'Zwiń menu',
+              'Collapse Sidebar(sidebar)(aria-label)': 'Zwiń menu',
+              'Show Sidebar': 'Pokaż menu',
+              'Hide Sidebar': 'Ukryj menu',
+              'Toggle Theme': 'Zmień motyw',
+              'Toggle Theme(theme switcher)(aria-label)': 'Zmień motyw',
+              Light: 'Jasny',
+              'Light(theme switcher)(aria-label)': 'Jasny',
+              Dark: 'Ciemny',
+              'Dark(theme switcher)(aria-label)': 'Ciemny',
+              System: 'Systemowy',
+              'System(theme switcher)(aria-label)': 'Systemowy',
+              'Copy Link': 'Kopiuj link',
+              'Copy Link(accordion)(aria-label)': 'Kopiuj link',
+              'Copy Text': 'Kopiuj tekst',
+              'Copied Text': 'Skopiowano',
+              'Last updated on': 'Ostatnia aktualizacja',
+              'Last updated on(page footer)': 'Ostatnia aktualizacja',
+            },
+          }}
+        >
           <StudyStateProvider>
             {children}
             <StudyTutor />

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, ArrowRight } from 'lucide-react';
+import { ArrowRight, RotateCcw } from 'lucide-react';
 import type { LessonNumber } from '@/lib/study/types';
 import { useStudyState } from './state-provider';
 
@@ -14,7 +14,9 @@ export function LessonComplete({ lesson, next }: { lesson: LessonNumber; next?: 
       <div>
         <p className="text-sm font-semibold">Lektion {lesson}</p>
         <p className="mt-1 text-xs text-fd-muted-foreground">
-          {complete ? 'Oznaczona jako przeczytana.' : 'Zaznacz dopiero po wykonaniu pytań „Sprawdź się”.'}
+          {complete
+            ? 'Ukończona. Jeśli materiał nie jest pewny, wróć do powtórki.'
+            : 'Zaznacz dopiero po wykonaniu pytań „Sprawdź się”.'}
         </p>
       </div>
       <div className="flex gap-2">
@@ -23,8 +25,8 @@ export function LessonComplete({ lesson, next }: { lesson: LessonNumber; next?: 
           onClick={() => setLessonProgress(lesson, complete ? 70 : 100)}
           className="inline-flex min-h-10 items-center gap-2 rounded-md border border-fd-border px-3 text-sm font-medium hover:bg-fd-muted"
         >
-          {complete ? <Check className="size-4 text-emerald-600" aria-hidden="true" /> : null}
-          {complete ? 'Gotowe' : 'Oznacz jako gotowe'}
+          {complete ? <RotateCcw className="size-4" aria-hidden="true" /> : null}
+          {complete ? 'Wróć do powtórki' : 'Oznacz jako gotowe'}
         </button>
         <Link
           href={next ? `/docs/lessons/${next}` : '/practice'}

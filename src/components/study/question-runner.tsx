@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Check, RotateCcw, X } from 'lucide-react';
+import { ArrowRight, RotateCcw } from 'lucide-react';
+import { Callout } from 'fumadocs-ui/components/callout';
 import type { StudyQuestion } from '@/lib/study/types';
 import { cn } from '@/lib/cn';
 import { useStudyState } from './state-provider';
@@ -13,9 +14,17 @@ type QuestionRunnerProps = {
   questions: StudyQuestion[];
   mode?: 'practice' | 'retry';
   onComplete?: (results: SessionResult[]) => void;
+  onLeave?: () => void;
+  leaveLabel?: string;
 };
 
-export function QuestionRunner({ questions, mode = 'practice', onComplete }: QuestionRunnerProps) {
+export function QuestionRunner({
+  questions,
+  mode = 'practice',
+  onComplete,
+  onLeave,
+  leaveLabel = 'Nowa seria',
+}: QuestionRunnerProps) {
   const { recordAnswer } = useStudyState();
   const [index, setIndex] = useState(0);
   const [answer, setAnswer] = useState('');
@@ -53,20 +62,34 @@ export function QuestionRunner({ questions, mode = 'practice', onComplete }: Que
   });
 
   if (!question) {
+    const firstTryCorrect = results.filter((result) => result.firstTryCorrect).length;
+    const accuracy = results.length ? Math.round((firstTryCorrect / results.length) * 100) : 0;
     return (
-      <div className="py-10 text-center">
-        <Check className="mx-auto size-6 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
-        <h2 className="mt-3 text-xl font-semibold">Seria zakończona</h2>
-        <p className="mt-2 text-sm text-fd-muted-foreground">
-          {results.filter((result) => result.firstTryCorrect).length} z {results.length} odpowiedzi poprawnych za pierwszym razem.
-        </p>
+      <div className="max-w-2xl py-6">
+        <Callout type="success" title="Seria zakończona" className="my-0">
+          <p>
+            Poprawnie za pierwszym razem: {firstTryCorrect} z {results.length} ({accuracy}%).
+            Każda pomyłka została zapisana do powtórki.
+          </p>
+        </Callout>
         <div className="mt-6 flex justify-center gap-3">
+          {onLeave ? (
+            <button
+              type="button"
+              onClick={onLeave}
+              className="rounded-md bg-fd-primary px-4 py-2 text-sm font-medium text-fd-primary-foreground"
+            >
+              {leaveLabel}
+            </button>
+          ) : null}
           <Link href="/mistakes" className="rounded-md border border-fd-border px-4 py-2 text-sm font-medium hover:bg-fd-muted">
-            Zobacz błędy
+            Historia błędów
           </Link>
-          <Link href="/study" className="rounded-md bg-fd-primary px-4 py-2 text-sm font-medium text-fd-primary-foreground">
-            Wróć do planu
-          </Link>
+          {!onLeave ? (
+            <Link href="/study" className="rounded-md bg-fd-primary px-4 py-2 text-sm font-medium text-fd-primary-foreground">
+              Wróć do planu
+            </Link>
+          ) : null}
         </div>
       </div>
     );
@@ -127,9 +150,27 @@ export function QuestionRunner({ questions, mode = 'practice', onComplete }: Que
     <section aria-labelledby="question-title">
       <div className="flex items-center justify-between gap-4 text-xs text-fd-muted-foreground">
         <span>Lektion {question.lesson} · {question.topic}</span>
-        <span>{index + 1} / {questions.length}</span>
+        <span className="flex items-center gap-3">
+          <span>{index + 1} / {questions.length}</span>
+          {onLeave ? (
+            <button
+              type="button"
+              onClick={onLeave}
+              className="font-medium text-fd-muted-foreground hover:text-fd-foreground"
+            >
+              Przerwij
+            </button>
+          ) : null}
+        </span>
       </div>
-      <div className="mt-3 h-1 overflow-hidden rounded-full bg-fd-muted" aria-hidden="true">
+      <div
+        className="mt-3 h-1 overflow-hidden rounded-full bg-fd-muted"
+        role="progressbar"
+        aria-label="Postęp serii"
+        aria-valuemin={0}
+        aria-valuemax={questions.length}
+        aria-valuenow={index + 1}
+      >
         <div className="h-full bg-fd-primary transition-[width]" style={{ width: `${((index + 1) / questions.length) * 100}%` }} />
       </div>
 
@@ -210,10 +251,7 @@ export function QuestionRunner({ questions, mode = 'practice', onComplete }: Que
       </div>
 
       {status === 'wrong' ? (
-        <div className="mt-7 border-l-2 border-red-500/70 pl-5" role="alert">
-          <p className="flex items-center gap-2 text-sm font-semibold text-red-700 dark:text-red-400">
-            <X className="size-4" aria-hidden="true" /> Jeszcze nie
-          </p>
+        <Callout type="error" title="Jeszcze nie" className="mt-7" role="alert">
           <dl className="mt-4 grid gap-3 text-sm">
             <div>
               <dt className="text-fd-muted-foreground">Twoja odpowiedź</dt>
@@ -235,14 +273,11 @@ export function QuestionRunner({ questions, mode = 'practice', onComplete }: Que
           >
             <RotateCcw className="size-4" aria-hidden="true" /> Spróbuj ponownie
           </button>
-        </div>
+        </Callout>
       ) : null}
 
       {status === 'correct' ? (
-        <div className="mt-7 border-l-2 border-emerald-500/70 pl-5" aria-live="polite">
-          <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-            <Check className="size-4" aria-hidden="true" /> Dobrze
-          </p>
+        <Callout type="success" title="Dobrze" className="mt-7" aria-live="polite">
           <p className="mt-2 max-w-2xl text-sm leading-6 text-fd-muted-foreground">{question.explanation}</p>
           <p className="mt-2 text-xs text-fd-muted-foreground">Źródło: {question.source.label}</p>
           <button
@@ -252,7 +287,7 @@ export function QuestionRunner({ questions, mode = 'practice', onComplete }: Que
           >
             Dalej <ArrowRight className="size-4" aria-hidden="true" />
           </button>
-        </div>
+        </Callout>
       ) : null}
 
       {status === 'retry' ? (
