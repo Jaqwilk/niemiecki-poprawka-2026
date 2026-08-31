@@ -206,7 +206,7 @@ export function FlashcardsView() {
 
       <div className="mt-12 flex items-start gap-3 border-t border-fd-border pt-5 text-xs leading-5 text-fd-muted-foreground">
         <Repeat2 className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        <p>Postęp zapisuje się automatycznie w tej przeglądarce. Dokładne odpowiedzi są sprawdzane lokalnie; niejednoznaczne odpowiedzi pisemne ocenia szybki model AI.</p>
+        <p>Postęp zapisuje się automatycznie w tej przeglądarce. Większość wpisów jest oceniana lokalnie w ułamku sekundy; szybki model AI sprawdza tylko niejednoznaczne synonimy.</p>
       </div>
     </StudyPageShell>
   );

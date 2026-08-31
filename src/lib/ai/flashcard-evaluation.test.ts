@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { isFlashcardVerdict, sanitizeFlashcardEvaluation } from './flashcard-evaluation';
+import {
+  createFlashcardEvaluation,
+  isFlashcardEvaluationReason,
+  isFlashcardVerdict,
+  sanitizeFlashcardEvaluation,
+} from './flashcard-evaluation';
 
 describe('flashcard evaluation input', () => {
   it('accepts only known lessons and directions', () => {
@@ -30,5 +35,16 @@ describe('flashcard evaluation input', () => {
     expect(isFlashcardVerdict('almost')).toBe(true);
     expect(isFlashcardVerdict('maybe')).toBe(false);
   });
-});
 
+  it('validates compact AI reasons and creates Polish feedback locally', () => {
+    expect(isFlashcardEvaluationReason('equivalent')).toBe(true);
+    expect(isFlashcardEvaluationReason('long_explanation')).toBe(false);
+    expect(createFlashcardEvaluation('equivalent', 'park')).toEqual({
+      verdict: 'correct',
+      feedback: 'Dobrze — ta odpowiedź ma równoważne znaczenie.',
+      correction: 'park',
+      source: 'ai',
+    });
+    expect(createFlashcardEvaluation('different_meaning', 'park').verdict).toBe('incorrect');
+  });
+});

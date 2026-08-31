@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  advanceFlashcardLearnStep,
   buildMultipleChoiceOptions,
+  evaluateFlashcardAnswerLocally,
+  flashcardLearnBatch,
   isExactFlashcardAnswer,
   nextFlashcardMastery,
   normalizeFlashcardAnswer,
@@ -63,5 +66,49 @@ describe('vocabulary flashcards', () => {
       1,
     );
     expect(selected[0].id).toBe(second.id);
+  });
+
+  it('grades common written-answer cases locally and leaves semantic synonyms to AI', () => {
+    const park = vocabularyFlashcards.find((card) => card.german.startsWith('der Park'))!;
+    const zoo = vocabularyFlashcards.find((card) => card.german.startsWith('der Zoo'))!;
+
+    expect(evaluateFlashcardAnswerLocally(park, 'parkk', 'de-pl', vocabularyFlashcards)?.verdict).toBe('correct');
+    expect(evaluateFlashcardAnswerLocally(park, zoo.polish, 'de-pl', vocabularyFlashcards)?.verdict).toBe('incorrect');
+    expect(evaluateFlashcardAnswerLocally(park, 'teren zielony', 'de-pl', vocabularyFlashcards)).toBeNull();
+    expect(evaluateFlashcardAnswerLocally(park, 'Park', 'pl-de', vocabularyFlashcards)?.verdict).toBe('almost');
+    expect(evaluateFlashcardAnswerLocally(park, 'die Park', 'pl-de', vocabularyFlashcards)?.verdict).toBe('almost');
+  });
+
+  it('keeps learning in batches of ten: choice first, then written, then next batch', () => {
+    const ids = Array.from({ length: 23 }, (_, index) => `card-${index + 1}`);
+    const firstBatch = flashcardLearnBatch(ids, 0);
+    expect(firstBatch).toEqual(ids.slice(0, 10));
+
+    const recognized = Object.fromEntries(firstBatch.map((id) => [id, 1])) as Record<string, 0 | 1 | 2>;
+    const writtenStep = advanceFlashcardLearnStep(
+      ids,
+      { batchIndex: 0, phase: 'choice', queue: [firstBatch.at(-1)!] },
+      recognized,
+    );
+    expect(writtenStep).toEqual({ batchIndex: 0, phase: 'written', queue: firstBatch });
+
+    const mastered = Object.fromEntries(firstBatch.map((id) => [id, 2])) as Record<string, 0 | 1 | 2>;
+    const nextBatch = advanceFlashcardLearnStep(
+      ids,
+      { batchIndex: 0, phase: 'written', queue: [firstBatch.at(-1)!] },
+      mastered,
+    );
+    expect(nextBatch).toEqual({ batchIndex: 1, phase: 'choice', queue: ids.slice(10, 20) });
+  });
+
+  it('repeats missed cards before changing the learning phase', () => {
+    const ids = Array.from({ length: 10 }, (_, index) => `card-${index + 1}`);
+    const mastery = Object.fromEntries(ids.map((id) => [id, id === 'card-3' ? 0 : 1])) as Record<string, 0 | 1 | 2>;
+    const next = advanceFlashcardLearnStep(
+      ids,
+      { batchIndex: 0, phase: 'choice', queue: ['card-10'] },
+      mastery,
+    );
+    expect(next).toEqual({ batchIndex: 0, phase: 'choice', queue: ['card-3'] });
   });
 });

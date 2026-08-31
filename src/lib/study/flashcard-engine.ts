@@ -3,6 +3,9 @@ import type { VocabularyFlashcard } from './flashcards';
 export type FlashcardDirection = 'de-pl' | 'pl-de';
 export type FlashcardVerdict = 'correct' | 'almost' | 'incorrect';
 export type FlashcardMastery = 0 | 1 | 2;
+export type FlashcardLearnPhase = 'choice' | 'written';
+
+export const FLASHCARD_LEARN_BATCH_SIZE = 10;
 
 export type FlashcardProgress = {
   mastery: FlashcardMastery;
@@ -24,7 +27,7 @@ export function normalizeFlashcardAnswer(value: string) {
     .replace(/\s+/g, ' ');
 }
 
-function answerVariants(value: string, german: boolean) {
+export function flashcardAnswerVariants(value: string, german: boolean) {
   const withoutNotes = value.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
   const variants = new Set([withoutNotes]);
   for (const part of withoutNotes.split(/\s+(?:\/|;|↔)\s+/)) {
@@ -50,7 +53,134 @@ export function isExactFlashcardAnswer(
 ) {
   const normalized = normalizeFlashcardAnswer(answer);
   if (!normalized) return false;
-  return answerVariants(expectedFlashcardAnswer(card, direction), direction === 'pl-de').includes(normalized);
+  return flashcardAnswerVariants(expectedFlashcardAnswer(card, direction), direction === 'pl-de').includes(normalized);
+}
+
+export type LocalFlashcardEvaluation = {
+  verdict: FlashcardVerdict;
+  feedback: string;
+};
+
+const GERMAN_ARTICLES = new Set([
+  'der',
+  'die',
+  'das',
+  'den',
+  'dem',
+  'des',
+  'ein',
+  'eine',
+  'einen',
+  'einem',
+  'einer',
+  'eines',
+]);
+
+function editDistance(left: string, right: string) {
+  if (left === right) return 0;
+  if (!left) return right.length;
+  if (!right) return left.length;
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    const current = [leftIndex];
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      current[rightIndex] = Math.min(
+        current[rightIndex - 1] + 1,
+        previous[rightIndex] + 1,
+        previous[rightIndex - 1] + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
+      );
+    }
+    previous = current;
+  }
+  return previous[right.length];
+}
+
+function sameWordsExceptGermanArticle(expected: string, submitted: string) {
+  const expectedWords = expected.split(' ');
+  const submittedWords = submitted.split(' ');
+  if (expectedWords.length < 2 || !GERMAN_ARTICLES.has(expectedWords[0])) return false;
+  if (submittedWords.join(' ') === expectedWords.slice(1).join(' ')) return true;
+  return (
+    submittedWords.length === expectedWords.length &&
+    GERMAN_ARTICLES.has(submittedWords[0]) &&
+    submittedWords[0] !== expectedWords[0] &&
+    submittedWords.slice(1).join(' ') === expectedWords.slice(1).join(' ')
+  );
+}
+
+function isMinorTypo(expected: string, submitted: string) {
+  if (expected.split(' ').length !== submitted.split(' ').length) return false;
+  const longest = Math.max(expected.length, submitted.length);
+  if (longest < 4) return false;
+  const allowedDistance = longest >= 10 ? 2 : 1;
+  return editDistance(expected, submitted) <= allowedDistance;
+}
+
+function isSubstantialPartialAnswer(expected: string, submitted: string) {
+  const expectedWords = expected.split(' ');
+  const submittedWords = submitted.split(' ');
+  if (expectedWords.length < 2 || submittedWords.length >= expectedWords.length) return false;
+  if (submitted.length < 3 || submitted.length / expected.length < 0.4) return false;
+  let cursor = 0;
+  for (const word of expectedWords) {
+    if (word === submittedWords[cursor]) cursor += 1;
+  }
+  return cursor === submittedWords.length;
+}
+
+export function evaluateFlashcardAnswerLocally(
+  card: VocabularyFlashcard,
+  answer: string,
+  direction: FlashcardDirection,
+  pool: readonly VocabularyFlashcard[],
+): LocalFlashcardEvaluation | null {
+  const submitted = normalizeFlashcardAnswer(answer);
+  if (!submitted) return null;
+  const expectedVariants = flashcardAnswerVariants(
+    expectedFlashcardAnswer(card, direction),
+    direction === 'pl-de',
+  );
+
+  if (expectedVariants.includes(submitted)) {
+    return { verdict: 'correct', feedback: 'Dokładnie tak — odpowiedź zgadza się z fiszką.' };
+  }
+
+  if (direction === 'pl-de' && expectedVariants.some((expected) => sameWordsExceptGermanArticle(expected, submitted))) {
+    return {
+      verdict: 'almost',
+      feedback: 'Znaczenie jest poprawne, ale popraw lub dodaj niemiecki rodzajnik.',
+    };
+  }
+
+  const matchesAnotherCard = pool.some((candidate) => {
+    if (candidate.id === card.id) return false;
+    return flashcardAnswerVariants(
+      expectedFlashcardAnswer(candidate, direction),
+      direction === 'pl-de',
+    ).includes(submitted);
+  });
+  if (matchesAnotherCard) {
+    return {
+      verdict: 'incorrect',
+      feedback: 'To poprawne słówko, ale oznacza coś innego. Sprawdź właściwą parę poniżej.',
+    };
+  }
+
+  if (expectedVariants.some((expected) => isMinorTypo(expected, submitted))) {
+    return {
+      verdict: 'correct',
+      feedback: 'Dobrze — to tylko drobna literówka, znaczenie i forma są czytelne.',
+    };
+  }
+
+  if (expectedVariants.some((expected) => isSubstantialPartialAnswer(expected, submitted))) {
+    return {
+      verdict: 'almost',
+      feedback: 'Kierunek jest dobry, ale brakuje części wymaganej odpowiedzi.',
+    };
+  }
+
+  return null;
 }
 
 export function primaryGermanTerm(card: VocabularyFlashcard) {
@@ -136,4 +266,46 @@ export function selectLearnCards(
       return stableHash(left.id) - stableHash(right.id);
     })
     .slice(0, Math.max(1, Math.min(count, cards.length)));
+}
+
+export type FlashcardLearnStep = {
+  batchIndex: number;
+  phase: FlashcardLearnPhase;
+  queue: string[];
+};
+
+export function flashcardLearnBatch(
+  sessionCardIds: readonly string[],
+  batchIndex: number,
+  batchSize = FLASHCARD_LEARN_BATCH_SIZE,
+) {
+  const start = batchIndex * batchSize;
+  return sessionCardIds.slice(start, start + batchSize);
+}
+
+export function advanceFlashcardLearnStep(
+  sessionCardIds: readonly string[],
+  step: FlashcardLearnStep,
+  mastery: Record<string, FlashcardMastery>,
+  batchSize = FLASHCARD_LEARN_BATCH_SIZE,
+): FlashcardLearnStep {
+  const remainingQueue = step.queue.slice(1);
+  if (remainingQueue.length > 0) return { ...step, queue: remainingQueue };
+
+  const currentBatch = flashcardLearnBatch(sessionCardIds, step.batchIndex, batchSize);
+  const requiredMastery = step.phase === 'choice' ? 1 : 2;
+  const pending = currentBatch.filter((cardId) => (mastery[cardId] ?? 0) < requiredMastery);
+  if (pending.length > 0) return { ...step, queue: pending };
+
+  if (step.phase === 'choice') {
+    return { batchIndex: step.batchIndex, phase: 'written', queue: [...currentBatch] };
+  }
+
+  const nextBatchIndex = step.batchIndex + 1;
+  const nextBatch = flashcardLearnBatch(sessionCardIds, nextBatchIndex, batchSize);
+  return {
+    batchIndex: nextBatchIndex,
+    phase: 'choice',
+    queue: [...nextBatch],
+  };
 }

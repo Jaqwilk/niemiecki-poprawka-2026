@@ -5,14 +5,19 @@ import { Brain, Check, Lightbulb, LoaderCircle, Sparkles, Star, Volume2, X } fro
 import { cn } from '@/lib/cn';
 import type { FlashcardEvaluation } from '@/lib/ai/flashcard-evaluation';
 import {
+  advanceFlashcardLearnStep,
   buildMultipleChoiceOptions,
+  evaluateFlashcardAnswerLocally,
   expectedFlashcardAnswer,
+  FLASHCARD_LEARN_BATCH_SIZE,
+  flashcardLearnBatch,
   flashcardPrompt,
-  isExactFlashcardAnswer,
   nextFlashcardMastery,
+  normalizeFlashcardAnswer,
   primaryGermanTerm,
   selectLearnCards,
   type FlashcardDirection,
+  type FlashcardLearnPhase,
   type FlashcardMastery,
   type FlashcardProgress,
   type FlashcardVerdict,
@@ -37,6 +42,8 @@ export function FlashcardLearn({ cards, allCards, direction, progress, onResult,
   const [started, setStarted] = useState(false);
   const [sessionCards, setSessionCards] = useState<VocabularyFlashcard[]>([]);
   const [queue, setQueue] = useState<string[]>([]);
+  const [batchIndex, setBatchIndex] = useState(0);
+  const [phase, setPhase] = useState<FlashcardLearnPhase>('choice');
   const [mastery, setMastery] = useState<Record<string, FlashcardMastery>>({});
   const [answer, setAnswer] = useState('');
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -45,15 +52,25 @@ export function FlashcardLearn({ cards, allCards, direction, progress, onResult,
   const [hintShown, setHintShown] = useState(false);
   const [stats, setStats] = useState({ attempts: 0, correct: 0, ai: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
+  const evaluationCacheRef = useRef(new Map<string, FlashcardEvaluation>());
 
+  const sessionCardIds = useMemo(() => sessionCards.map((card) => card.id), [sessionCards]);
+  const currentBatchIds = useMemo(
+    () => flashcardLearnBatch(sessionCardIds, batchIndex),
+    [batchIndex, sessionCardIds],
+  );
   const current = sessionCards.find((card) => card.id === queue[0]);
   const currentMastery = current ? mastery[current.id] ?? 0 : 0;
-  const questionType: 'choice' | 'written' = currentMastery >= 1 ? 'written' : 'choice';
+  const questionType: 'choice' | 'written' = phase;
   const options = useMemo(
     () => current ? buildMultipleChoiceOptions(current, allCards, direction) : [],
     [allCards, current, direction],
   );
   const masteredCount = sessionCards.filter((card) => mastery[card.id] === 2).length;
+  const phaseCompletedCount = currentBatchIds.filter(
+    (cardId) => (mastery[cardId] ?? 0) >= (phase === 'choice' ? 1 : 2),
+  ).length;
+  const totalBatches = Math.ceil(sessionCards.length / FLASHCARD_LEARN_BATCH_SIZE);
 
   useEffect(() => {
     if (started && questionType === 'written' && !feedback) window.setTimeout(() => inputRef.current?.focus(), 60);
@@ -79,17 +96,21 @@ export function FlashcardLearn({ cards, allCards, direction, progress, onResult,
   function start(size: number) {
     const selected = selectLearnCards(cards, progress, size);
     const initialMastery = Object.fromEntries(
-      selected.map((card) => [card.id, Math.min(progress[card.id]?.mastery ?? 0, 1) as FlashcardMastery]),
+      selected.map((card) => [card.id, 0 as FlashcardMastery]),
     );
+    const selectedIds = selected.map((card) => card.id);
     setSessionCards(selected);
     setMastery(initialMastery);
-    setQueue(selected.map((card) => card.id));
+    setQueue(flashcardLearnBatch(selectedIds, 0));
+    setBatchIndex(0);
+    setPhase('choice');
     setStarted(true);
     setFeedback(null);
     setAnswer('');
     setError('');
     setHintShown(false);
     setStats({ attempts: 0, correct: 0, ai: 0 });
+    evaluationCacheRef.current.clear();
   }
 
   function createFeedback(verdict: FlashcardVerdict, selectedAnswer: string, type: 'choice' | 'written', source: 'ai' | 'local', message?: string) {
@@ -121,16 +142,27 @@ export function FlashcardLearn({ cards, allCards, direction, progress, onResult,
     if (!current || loading || feedback || !answer.trim()) return;
     const submitted = answer.trim();
     setError('');
-    if (isExactFlashcardAnswer(current, submitted, direction)) {
-      createFeedback('correct', submitted, 'written', 'local', 'Dokładnie tak — odpowiedź zgadza się z fiszką.');
+    const localEvaluation = evaluateFlashcardAnswerLocally(current, submitted, direction, allCards);
+    if (localEvaluation) {
+      createFeedback(localEvaluation.verdict, submitted, 'written', 'local', localEvaluation.feedback);
+      return;
+    }
+
+    const cacheKey = `${current.id}|${direction}|${normalizeFlashcardAnswer(submitted)}`;
+    const cached = evaluationCacheRef.current.get(cacheKey);
+    if (cached) {
+      setFeedback({ ...cached, answer: submitted, questionType: 'written' });
       return;
     }
 
     setLoading(true);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 8_000);
     try {
       const response = await fetch('/api/flashcards/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           cardId: current.id,
           lesson: current.lesson,
@@ -144,10 +176,14 @@ export function FlashcardLearn({ cards, allCards, direction, progress, onResult,
       if (!response.ok || !payload || !['correct', 'almost', 'incorrect'].includes(payload.verdict)) {
         throw new Error(payload?.error || 'AI nie mogło teraz ocenić odpowiedzi.');
       }
+      evaluationCacheRef.current.set(cacheKey, payload);
       setFeedback({ ...payload, answer: submitted, questionType: 'written' });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'AI nie mogło teraz ocenić odpowiedzi.');
+      setError(caught instanceof DOMException && caught.name === 'AbortError'
+        ? 'Ocena trwała zbyt długo. Spróbuj ponownie albo użyj „Nie pamiętam”.'
+        : caught instanceof Error ? caught.message : 'AI nie mogło teraz ocenić odpowiedzi.');
     } finally {
+      window.clearTimeout(timeout);
       setLoading(false);
     }
   }
@@ -156,10 +192,17 @@ export function FlashcardLearn({ cards, allCards, direction, progress, onResult,
     if (!current || !feedback) return;
     const verdict = override ?? feedback.verdict;
     const nextMastery = nextFlashcardMastery(currentMastery, verdict, feedback.questionType);
+    const nextMasteryState = { ...mastery, [current.id]: nextMastery };
+    const nextStep = advanceFlashcardLearnStep(
+      sessionCardIds,
+      { batchIndex, phase, queue },
+      nextMasteryState,
+    );
     onResult(current.id, verdict, feedback.questionType);
-    setMastery((value) => ({ ...value, [current.id]: nextMastery }));
-    const rest = queue.slice(1);
-    setQueue(nextMastery < 2 ? [...rest, current.id] : rest);
+    setMastery(nextMasteryState);
+    setBatchIndex(nextStep.batchIndex);
+    setPhase(nextStep.phase);
+    setQueue(nextStep.queue);
     setStats((value) => ({
       attempts: value.attempts + 1,
       correct: value.correct + (verdict === 'correct' ? 1 : 0),
@@ -200,16 +243,17 @@ export function FlashcardLearn({ cards, allCards, direction, progress, onResult,
         <div className="flex size-10 items-center justify-center rounded-lg bg-fd-primary/10 text-fd-primary"><Brain className="size-5" aria-hidden="true" /></div>
         <h2 className="mt-5 text-xl font-semibold">Adaptacyjna nauka</h2>
         <p className="mt-2 text-sm leading-6 text-fd-muted-foreground">
-          Najpierw rozpoznajesz słowo, potem wpisujesz je z pamięci. Trudne karty wracają, aż odpowiesz poprawnie.
+          Uczysz się partiami po maksymalnie 10 słów. Najpierw wybierasz odpowiedzi dla całej partii,
+          potem wpisujesz te same słowa z pamięci. Dopiero wtedy przechodzisz dalej.
         </p>
         <div className="mt-6 rounded-xl border border-fd-border bg-fd-muted/35 p-4 text-sm leading-6">
           <div className="flex items-start gap-3">
             <Sparkles className="mt-0.5 size-4 shrink-0 text-fd-primary" aria-hidden="true" />
-            <p><strong>Inteligentna ocena:</strong> dokładne odpowiedzi są zaliczane od razu, a Luna sprawdza literówki, synonimy i brakujące formy.</p>
+            <p><strong>Szybka ocena:</strong> poprawne odpowiedzi, typowe literówki i znane pomyłki są sprawdzane natychmiast. Luna włącza się tylko przy niejednoznacznych synonimach.</p>
           </div>
         </div>
         <fieldset className="mt-7">
-          <legend className="text-sm font-semibold">Długość krótkiej sesji</legend>
+          <legend className="text-sm font-semibold">Długość sesji</legend>
           <div className="mt-3 grid grid-cols-3 gap-2">
             {[10, 20, cards.length].map((size, index) => (
               <button key={`${size}-${index}`} type="button" onClick={() => start(size)} className="min-h-12 rounded-md border border-fd-border px-3 text-sm font-medium hover:border-fd-primary hover:bg-fd-muted">
@@ -244,11 +288,30 @@ export function FlashcardLearn({ cards, allCards, direction, progress, onResult,
 
   return (
     <section className="mx-auto max-w-2xl" aria-label="Adaptacyjna nauka fiszek">
-      <div className="mb-4 flex items-center gap-3">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-fd-muted">
+      <div className="mb-5 rounded-xl border border-fd-border bg-fd-card p-3.5">
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <p className="font-semibold">Partia {batchIndex + 1} z {totalBatches}</p>
+          <p className="tabular-nums text-fd-muted-foreground">Opanowane {masteredCount}/{sessionCards.length}</p>
+        </div>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-fd-muted">
           <div className="h-full rounded-full bg-fd-primary transition-[width]" style={{ width: `${progressPercent}%` }} />
         </div>
-        <span className="text-xs tabular-nums text-fd-muted-foreground">{masteredCount}/{sessionCards.length}</span>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="Etapy bieżącej partii">
+          <LearnPhase
+            index={1}
+            label="Wybierz z 4 opcji"
+            active={phase === 'choice'}
+            complete={phase === 'written'}
+            progress={phase === 'choice' ? `${phaseCompletedCount}/${currentBatchIds.length}` : 'gotowe'}
+          />
+          <LearnPhase
+            index={2}
+            label="Wpisz z pamięci"
+            active={phase === 'written'}
+            complete={false}
+            progress={phase === 'written' ? `${phaseCompletedCount}/${currentBatchIds.length}` : 'następnie'}
+          />
+        </div>
       </div>
       <div className="rounded-2xl border border-fd-border bg-fd-card p-5 shadow-sm sm:p-7">
         <div className="flex items-start justify-between gap-3">
@@ -300,7 +363,7 @@ export function FlashcardLearn({ cards, allCards, direction, progress, onResult,
                 {loading ? <LoaderCircle className="size-4 animate-spin" aria-label="AI ocenia" /> : 'Sprawdź'}
               </button>
             </div>
-            {loading ? <p className="mt-2 flex items-center gap-2 text-xs text-fd-muted-foreground"><Sparkles className="size-3.5 text-fd-primary" aria-hidden="true" /> Luna ocenia znaczenie i formę…</p> : null}
+            {loading ? <p className="mt-2 flex items-center gap-2 text-xs text-fd-muted-foreground"><Sparkles className="size-3.5 text-fd-primary" aria-hidden="true" /> Luna sprawdza niejednoznaczną odpowiedź…</p> : null}
             {error ? <p role="alert" className="mt-3 rounded-md border border-red-500/25 bg-red-500/8 px-3 py-2 text-sm text-red-700 dark:text-red-300">{error}</p> : null}
             {hintShown ? <p className="mt-3 text-sm text-fd-muted-foreground">Podpowiedź: odpowiedź zaczyna się od „{expected.trim().charAt(0)}”.</p> : null}
             <div className="mt-4 flex flex-wrap gap-3 text-xs">
@@ -341,7 +404,38 @@ function FeedbackPanel({ feedback, expected, onContinue, onOverride }: { feedbac
   );
 }
 
+function LearnPhase({
+  index,
+  label,
+  active,
+  complete,
+  progress,
+}: {
+  index: number;
+  label: string;
+  active: boolean;
+  complete: boolean;
+  progress: string;
+}) {
+  return (
+    <div className={cn(
+      'flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2',
+      active ? 'border-fd-primary/40 bg-fd-primary/8' : 'border-fd-border bg-fd-muted/25',
+    )}>
+      <span className={cn(
+        'grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold',
+        active || complete ? 'bg-fd-primary text-fd-primary-foreground' : 'bg-fd-muted text-fd-muted-foreground',
+      )}>
+        {complete ? <Check className="size-3.5" aria-hidden="true" /> : index}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-xs font-medium">{label}</span>
+        <span className="block text-[10px] tabular-nums text-fd-muted-foreground">{progress}</span>
+      </span>
+    </div>
+  );
+}
+
 function Stat({ value, label }: { value: number; label: string }) {
   return <div className="rounded-xl border border-fd-border bg-fd-muted/30 p-4"><p className="text-xl font-semibold">{value}</p><p className="mt-1 text-xs text-fd-muted-foreground">{label}</p></div>;
 }
-
