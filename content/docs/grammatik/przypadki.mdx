@@ -1,0 +1,122 @@
+---
+title: Przypadki bez chaosu
+description: Nominativ, Akkusativ i Dativ wyjaśnione na zdaniach z Lektion 13–18.
+icon: Scale
+---
+
+Nie musisz zaczynać od zapamiętywania trzech tabel. Najpierw ustal, **jaką rolę
+ma rzecz lub osoba w zdaniu**. Dopiero potem wybierz formę rodzajnika.
+
+<OneThing>
+  <strong>Nominativ</strong> wykonuje czynność. <strong>Akkusativ</strong> jest
+  tym, co widzisz, masz lub znajdujesz. <strong>Dativ</strong> często mówi,
+  komu coś się podoba/pomaga albo gdzie coś się znajduje.
+</OneThing>
+
+<CaseLegend />
+
+## Krok 1: znajdź sygnał
+
+| Widzisz w zdaniu | Użyj | Przykład |
+| --- | --- | --- |
+| podmiot albo <code>sein</code> | <CaseTag name="Nominativ" /> | <code>Der Park ist schön.</code> |
+| <code>es gibt</code> | <CaseTag name="Akkusativ" /> | <code>Es gibt einen Park.</code> |
+| <code>finden</code>, <code>mögen</code>, <code>haben</code> | <CaseTag name="Akkusativ" /> | <code>Ich mag den Park.</code> |
+| <code>ohne</code> | <CaseTag name="Akkusativ" /> | <code>ohne meinen Freund</code> |
+| <code>gefallen</code>, <code>helfen</code>, <code>danken</code>, <code>gehören</code> | <CaseTag name="Dativ" /> | <code>Der Park gefällt mir.</code> |
+| <code>mit</code> | <CaseTag name="Dativ" /> | <code>mit meinem Freund</code> |
+| przyimek miejsca i pytanie <code>Wo?</code> | <CaseTag name="Dativ" /> | <code>neben dem Park</code> |
+| <code>in/vor/nach</code> w czasie | <CaseTag name="Dativ" /> | <code>nach dem Kurs</code> |
+
+## Krok 2: zmień rodzajnik
+
+Najwięcej błędów powstaje w rodzaju męskim. Zacznij od pierwszego wiersza.
+
+| Rodzaj | <CaseTag name="Nominativ" /> | <CaseTag name="Akkusativ" /> | <CaseTag name="Dativ" /> |
+| --- | --- | --- | --- |
+| męski | <code>der / ein</code> | <code>den / einen</code> | <code>dem / einem</code> |
+| nijaki | <code>das / ein</code> | <code>das / ein</code> | <code>dem / einem</code> |
+| żeński | <code>die / eine</code> | <code>die / eine</code> | <code>der / einer</code> |
+| liczba mnoga | <code>die</code> | <code>die</code> | <code>den + -n</code> |
+
+<Example
+  german="der Park → Ich sehe den Park. → Ich bin in dem Park."
+  polish="Męski: der zmienia się na den w Akkusativie i na dem w Dativie."
+/>
+
+<Example
+  german="die Bank → Ich sehe die Bank. → Ich bin neben der Bank."
+  polish="Żeński: die zostaje w Akkusativie, ale w Dativie zmienia się na der."
+/>
+
+<Example
+  german="die Bäume → Ich sehe die Bäume. → Ich bin zwischen den Bäumen."
+  polish="W Dativie liczby mnogiej: den oraz zwykle dodatkowe -n przy rzeczowniku."
+/>
+
+<Rule title="Skróty, które warto rozpoznawać">
+  <code>an dem → am</code> oraz <code>in dem → im</code>. To nie są nowe
+  przypadki, tylko krótsze formy Dativu.
+</Rule>
+
+## Krok 3: zaimek zamiast osoby
+
+Przy <code>gefallen</code>, <code>helfen</code>, <code>danken</code> i
+<code>gehören</code> potrzebujesz Dativu:
+
+| osoba | Dativ | prosty przykład |
+| --- | --- | --- |
+| ich | <code>mir</code> | <code>Das gefällt mir.</code> |
+| du | <code>dir</code> | <code>Ich helfe dir.</code> |
+| er / es | <code>ihm</code> | <code>Das gehört ihm.</code> |
+| sie | <code>ihr</code> | <code>Ich danke ihr.</code> |
+| wir | <code>uns</code> | <code>Berlin gefällt uns.</code> |
+| ihr | <code>euch</code> | <code>Ich helfe euch.</code> |
+| sie | <code>ihnen</code> | <code>Das gefällt ihnen.</code> |
+| Sie | <code>Ihnen</code> | <code>Kann ich Ihnen helfen?</code> |
+
+<Rule title="mich czy mir?">
+  <code>mich</code> to Akkusativ, a <code>mir</code> to Dativ. W Twoim zakresie
+  najważniejsze jest: <code>Sie sehen mich</code>, ale
+  <code>Sie helfen mir</code>.
+</Rule>
+
+## Algorytm na zadanie
+
+<Steps>
+  <Step>Podkreśl czasownik albo przyimek, który wymusza przypadek.</Step>
+  <Step>Ustal rodzaj rzeczownika: <code>der</code>, <code>die</code>, <code>das</code> czy liczba mnoga.</Step>
+  <Step>Przejdź w tabeli do właściwej kolumny i dopiero wtedy wpisz formę.</Step>
+</Steps>
+
+<Mistake
+  wrong="Es gibt ein Park."
+  correct="Es gibt einen Park."
+  explanation="es gibt → Akkusativ; der Park → einen Park."
+/>
+
+<Mistake
+  wrong="Ich fahre mit meinen Freund."
+  correct="Ich fahre mit meinem Freund."
+  explanation="mit → Dativ; mein Freund → meinem Freund."
+/>
+
+<Mistake
+  wrong="Die Apotheke ist neben die Bank."
+  correct="Die Apotheke ist neben der Bank."
+  explanation="Położenie odpowiada na Wo?, więc die Bank przechodzi w Dativ: der Bank."
+/>
+
+## Sprawdź się
+
+<Recall prompt="Es gibt ___ Markt. (ein)" answer="einen Markt" />
+<Recall prompt="Ich arbeite mit ___ Kollegin. (mein)" answer="meiner Kollegin" />
+<Recall prompt="Die Katze ist zwischen ___ Bäumen." answer="den Bäumen" />
+<Recall prompt="Berlin gefällt ___. (ich)" answer="mir" />
+
+[Dalej: gramatyka Lektion 13](/docs/grammatik/13)
+
+<SourceNote>
+  Ta strona zawiera tylko formy potrzebne w Lektion 13–18. Pełne zastosowania
+  każdego przypadku są rozłożone na kolejnych stronach.
+</SourceNote>

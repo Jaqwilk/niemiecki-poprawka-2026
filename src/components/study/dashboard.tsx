@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, BookOpen, ClipboardCheck, RotateCcw } from 'lucide-react';
+import { ArrowRight, BookOpen, BookOpenCheck, ClipboardCheck, RotateCcw } from 'lucide-react';
 import { Callout } from 'fumadocs-ui/components/callout';
 import { Card, Cards } from 'fumadocs-ui/components/card';
 import { sprintDays, lessonTitles } from '@/lib/study/schedule';
@@ -152,6 +152,12 @@ export function StudyDashboard() {
       <section className="mt-12" aria-labelledby="priority-heading">
         <h2 id="priority-heading" className="text-sm font-semibold">Co dalej</h2>
         <Cards className="mt-4">
+          <Card
+            href="/docs/grammatik"
+            icon={<BookOpenCheck aria-hidden="true" />}
+            title="Gramatyka"
+            description="Wszystkie reguły Lektion 13–18 wyjaśnione osobno i prostym językiem."
+          />
           <Card
             href="/mistakes"
             icon={<RotateCcw aria-hidden="true" />}

@@ -20,6 +20,7 @@ Lokalna, osobista aplikacja do intensywnej powtórki **Lektion 13–18 w pięć 
 | --- | --- |
 | `/study` | dashboard pięciodniowego sprintu, bieżący dzień, postęp, szybki powrót |
 | `/docs/lessons/13` … `/docs/lessons/18` | sześć zwartych notatek Fumadocs |
+| `/docs/grammatik` | osobna, prosta powtórka całej gramatyki Lektion 13–18 |
 | `/practice` | rekomendowany zestaw zadań, tryb tematyczny i mieszany |
 | `/mistakes` | kolejka błędów i obowiązkowa poprawa |
 | `/test` | pełna próba bez feedbacku w trakcie; wynik i analiza po oddaniu |
@@ -27,7 +28,7 @@ Lokalna, osobista aplikacja do intensywnej powtórki **Lektion 13–18 w pięć 
 | `/api/edit/propose` | propozycja zmiany dozwolonego pliku dla Edit Mode |
 | `/api/edit/apply` | jawne zastosowanie wcześniej zatwierdzonej propozycji |
 
-Strona główna `/` przekierowuje do `/study`. Główna nawigacja pozostaje krótka: **Nauka, Lekcje, Ćwiczenia, Błędy, Test**. Repozytorium GitHub pozostaje dyskretnym linkiem w stopce/rogu, zgodnym z szablonem.
+Strona główna `/` przekierowuje do `/study`. Główna nawigacja pozostaje krótka: **Nauka, Lekcje, Gramatyka, Ćwiczenia, Fiszki, Błędy, Test**. Repozytorium GitHub pozostaje dyskretnym linkiem w stopce/rogu, zgodnym z szablonem.
 
 ## Warstwa treści
 
@@ -228,7 +229,8 @@ To zapobiega niewidocznemu nadpisaniu zmian i ogranicza powierzchnię dostępu d
 Planowane granice odpowiedzialności:
 
 ```text
-content/docs/lessons/       notatki MDX 13–18
+content/docs/lessons/       pełne notatki MDX 13–18
+content/docs/grammatik/     osobne, uproszczone objaśnienia gramatyki
 src/app/study/              dashboard
 src/app/practice/           ćwiczenia
 src/app/mistakes/           poprawa błędów
