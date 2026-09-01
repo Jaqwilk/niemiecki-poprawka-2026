@@ -160,10 +160,15 @@
   place-items: center;
   border: 1px solid #737373;
   border-radius: 50%;
+  line-height: 0;
 }
 
 .radioMark svg {
+  display: block;
   width: 0.85rem;
+  height: 0.85rem;
+  margin: auto;
+  transform: translateY(-0.015rem);
 }
 
 .modeOption strong,
@@ -346,6 +351,38 @@
   color: #525252;
   font-size: 0.68rem;
   line-height: 1.5;
+}
+
+.savedSession {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #b8c4ba;
+  background: #f3f8f3;
+}
+
+.savedSession > svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: #166534;
+}
+
+.savedSession strong,
+.savedSession span {
+  display: block;
+}
+
+.savedSession strong {
+  font-size: 0.72rem;
+}
+
+.savedSession span {
+  margin-top: 0.15rem;
+  color: #526055;
+  font-size: 0.64rem;
 }
 
 .recommendationNote svg {

@@ -1,18 +1,31 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Check, RotateCcw, X } from 'lucide-react';
+import { ArrowRight, Check, LoaderCircle, RotateCcw, Sparkles, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import type { StudyQuestion } from '@/lib/study/types';
+import {
+  evaluateAnswersWithAi,
+  localIncorrectEvaluation,
+  questionToEvaluationItem,
+} from '@/lib/ai/answer-evaluation';
+import { isCorrectAnswer } from '@/lib/study/engine';
+import {
+  clearPracticeDraft,
+  savePracticeDraft,
+  type PracticeDraft,
+} from '@/lib/study/practice-session-storage';
+import type { AnswerEvaluation, StudyQuestion } from '@/lib/study/types';
 import { AudioPrompt } from './audio-prompt';
 import { useStudyState } from './state-provider';
 import styles from './practice-sheet.module.css';
 
 type SessionResult = { questionId: string; firstTryCorrect: boolean };
+type PracticeStatus = 'idle' | 'checking' | 'wrong' | 'retry' | 'correct';
 
 type PracticeSheetProps = {
   questions: StudyQuestion[];
+  draft: PracticeDraft | null;
   scopeLabel: string;
   onLeave: () => void;
 };
@@ -37,15 +50,17 @@ function getInstruction(question: StudyQuestion) {
   return 'Ergänzen oder übersetzen Sie. Schreiben Sie die vollständige Lösung.';
 }
 
-export function PracticeSheet({ questions, scopeLabel, onLeave }: PracticeSheetProps) {
-  const { recordAnswer } = useStudyState();
-  const [index, setIndex] = useState(0);
-  const [answer, setAnswer] = useState('');
-  const [selectedTokens, setSelectedTokens] = useState<number[]>([]);
-  const [status, setStatus] = useState<'idle' | 'wrong' | 'retry' | 'correct'>('idle');
-  const [wrongCount, setWrongCount] = useState(0);
-  const [wrongAnswer, setWrongAnswer] = useState('');
-  const [results, setResults] = useState<SessionResult[]>([]);
+export function PracticeSheet({ questions, draft, scopeLabel, onLeave }: PracticeSheetProps) {
+  const { recordAnswer, savePracticeSession } = useStudyState();
+  const [index, setIndex] = useState(draft?.index ?? 0);
+  const [answer, setAnswer] = useState(draft?.answer ?? '');
+  const [selectedTokens, setSelectedTokens] = useState<number[]>(draft?.selectedTokens ?? []);
+  const [status, setStatus] = useState<PracticeStatus>(draft?.status ?? 'idle');
+  const [wrongCount, setWrongCount] = useState(draft?.wrongCount ?? 0);
+  const [wrongAnswer, setWrongAnswer] = useState(draft?.wrongAnswer ?? '');
+  const [results, setResults] = useState<SessionResult[]>(draft?.results ?? []);
+  const [evaluation, setEvaluation] = useState<AnswerEvaluation | null>(null);
+  const savedCompletion = useRef(false);
   const question = questions[index];
 
   const composedAnswer = useMemo(
@@ -55,6 +70,36 @@ export function PracticeSheet({ questions, scopeLabel, onLeave }: PracticeSheetP
         : answer,
     [answer, question, selectedTokens],
   );
+
+  useEffect(() => {
+    if (!draft || status === 'checking' || index >= questions.length) return;
+    savePracticeDraft({
+      ...draft,
+      index,
+      answer,
+      selectedTokens,
+      status,
+      wrongCount,
+      wrongAnswer,
+      results,
+    });
+  }, [answer, draft, index, questions.length, results, selectedTokens, status, wrongAnswer, wrongCount]);
+
+  useEffect(() => {
+    if (!draft || index < questions.length || savedCompletion.current) return;
+    savedCompletion.current = true;
+    const score = results.filter((result) => result.firstTryCorrect).length;
+    savePracticeSession({
+      id: draft.id,
+      createdAt: draft.createdAt,
+      completedAt: new Date().toISOString(),
+      scopeLabel,
+      score,
+      maxScore: results.length,
+      questionIds: questions.map((item) => item.id),
+    });
+    clearPracticeDraft();
+  }, [draft, index, questions, results, savePracticeSession, scopeLabel]);
 
   if (!question) {
     const firstTryCorrect = results.filter((result) => result.firstTryCorrect).length;
@@ -89,10 +134,35 @@ export function PracticeSheet({ questions, scopeLabel, onLeave }: PracticeSheetP
 
   const canSubmit = composedAnswer.trim().length > 0;
 
-  function submit() {
-    if (!canSubmit || status === 'wrong' || status === 'correct') return;
+  async function submit() {
+    if (!canSubmit || status === 'wrong' || status === 'correct' || status === 'checking') return;
     const retrying = status === 'retry';
-    const correct = recordAnswer(question, composedAnswer, retrying ? 'retry' : 'practice');
+    const locallyCorrect = isCorrectAnswer(question, composedAnswer);
+    let judged: AnswerEvaluation;
+    if (locallyCorrect) {
+      judged = {
+        verdict: 'correct',
+        issue: 'none',
+        feedback: question.explanation,
+        correction: question.correctAnswer,
+        source: 'local',
+      };
+    } else if (question.options || question.kind === 'true-false' || question.kind === 'order') {
+      judged = localIncorrectEvaluation(question.correctAnswer, question.explanation);
+    } else {
+      setStatus('checking');
+      try {
+        const response = await evaluateAnswersWithAi([
+          questionToEvaluationItem(question, composedAnswer, getInstruction(question)),
+        ]);
+        judged = response.evaluations[0];
+      } catch {
+        judged = localIncorrectEvaluation(question.correctAnswer, question.explanation);
+      }
+    }
+    setEvaluation(judged);
+    const correct = judged.verdict === 'correct';
+    recordAnswer(question, composedAnswer, retrying ? 'retry' : 'practice', correct);
     if (correct) {
       setStatus('correct');
       if (!results.some((result) => result.questionId === question.id)) {
@@ -112,6 +182,7 @@ export function PracticeSheet({ questions, scopeLabel, onLeave }: PracticeSheetP
     setAnswer('');
     setSelectedTokens([]);
     setStatus('retry');
+    setEvaluation(null);
   }
 
   function goNext() {
@@ -121,6 +192,7 @@ export function PracticeSheet({ questions, scopeLabel, onLeave }: PracticeSheetP
     setStatus('idle');
     setWrongCount(0);
     setWrongAnswer('');
+    setEvaluation(null);
     setIndex((current) => current + 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -255,19 +327,15 @@ export function PracticeSheet({ questions, scopeLabel, onLeave }: PracticeSheetP
             <aside className={styles.teacherNote} role="alert">
               <X aria-hidden="true" />
               <div>
-                <strong>{wrongCount === 1 ? 'Noch einmal.' : 'Vergleichen und noch einmal schreiben.'}</strong>
-                {wrongCount === 1 ? (
-                  <>
-                    <p>{question.hint ?? `Zwróć uwagę na zagadnienie: ${question.topic}.`}</p>
-                    <p className={styles.mutedNote}>Pełnej odpowiedzi jeszcze nie pokazuję.</p>
-                  </>
-                ) : (
-                  <>
-                    <p><span>Twoja odpowiedź:</span> {wrongAnswer || '—'}</p>
-                    <p><span>Wzór:</span> {question.correctAnswer}</p>
-                    <p>{question.explanation}</p>
-                  </>
-                )}
+                <strong>{evaluation?.verdict === 'almost' ? 'Prawie — popraw jeden szczegół.' : 'Noch einmal.'}</strong>
+                <div className={styles.animatedCorrection}>
+                  <p><span>Twoja odpowiedź:</span> <del>{wrongAnswer || '—'}</del></p>
+                  <p><span>Powinno być:</span> <ins>{evaluation?.correction ?? question.correctAnswer}</ins></p>
+                </div>
+                <p>{evaluation?.feedback ?? question.explanation}</p>
+                <p className={styles.evaluationSource}>
+                  {evaluation?.source === 'ai' ? <><Sparkles aria-hidden="true" /> Dokładna ocena AI</> : 'Sprawdzenie według klucza odpowiedzi'}
+                </p>
                 <button type="button" onClick={retry} className={styles.retryButton}>
                   <RotateCcw aria-hidden="true" /> Popraw z pamięci
                 </button>
@@ -284,10 +352,18 @@ export function PracticeSheet({ questions, scopeLabel, onLeave }: PracticeSheetP
               <Check aria-hidden="true" />
               <div>
                 <strong>Richtig.</strong>
-                <p>{question.explanation}</p>
+                <p>{evaluation?.feedback ?? question.explanation}</p>
+                {evaluation?.source === 'ai' ? <span className={styles.aiBadge}><Sparkles aria-hidden="true" /> Sprawdzone przez AI</span> : null}
                 <small>Źródło materiału: {question.source.label}</small>
               </div>
             </aside>
+          ) : null}
+
+          {status === 'checking' ? (
+            <div className={styles.checkingNote} aria-live="polite">
+              <LoaderCircle aria-hidden="true" />
+              <span><strong>AI sprawdza odpowiedź…</strong> Analizuję znaczenie, gramatykę, szyk i pisownię.</span>
+            </div>
           ) : null}
 
           {(status === 'idle' || status === 'retry') ? (

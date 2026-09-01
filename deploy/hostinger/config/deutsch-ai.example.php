@@ -22,4 +22,8 @@ return [
         'limit' => 120,
         'window_seconds' => 600,
     ],
+    'answer_rate_limit' => [
+        'limit' => 90,
+        'window_seconds' => 600,
+    ],
 ];

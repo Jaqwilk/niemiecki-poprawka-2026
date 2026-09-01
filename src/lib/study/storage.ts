@@ -19,6 +19,7 @@ export function loadStudyState(): StudyState {
       attempts: Array.isArray(parsed.attempts) ? parsed.attempts : [],
       mistakes: Array.isArray(parsed.mistakes) ? parsed.mistakes : [],
       mockAttempts: Array.isArray(parsed.mockAttempts) ? parsed.mockAttempts : [],
+      practiceSessions: Array.isArray(parsed.practiceSessions) ? parsed.practiceSessions : [],
     };
   } catch {
     return createInitialState();

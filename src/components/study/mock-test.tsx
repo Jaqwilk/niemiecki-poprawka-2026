@@ -8,12 +8,21 @@ import {
   Check,
   ClipboardCheck,
   FileText,
+  History,
+  LoaderCircle,
   RotateCcw,
   Save,
+  Sparkles,
 } from 'lucide-react';
 import { Accordion, Accordions } from 'fumadocs-ui/components/accordion';
 import { Callout } from 'fumadocs-ui/components/callout';
 import { cn } from '@/lib/cn';
+import {
+  evaluateAnswersWithAi,
+  localIncorrectEvaluation,
+  questionToEvaluationItem,
+  type AnswerEvaluationItem,
+} from '@/lib/ai/answer-evaluation';
 import { isCorrectAnswer } from '@/lib/study/engine';
 import {
   matchingAnswerBank,
@@ -23,7 +32,7 @@ import {
   type OpenMockTask,
   type PaperTestSection,
 } from '@/lib/study/mock';
-import type { MockAttempt, StudyQuestion } from '@/lib/study/types';
+import type { AnswerEvaluation, MockAttempt, StudyQuestion } from '@/lib/study/types';
 import { AudioPrompt } from './audio-prompt';
 import { StudyPageShell } from './page-shell';
 import { RouteMap } from './index';
@@ -367,12 +376,15 @@ function ObjectivePaperSection({
 }
 
 export function MockTest() {
-  const { hydrated, recordAnswer, saveMockAttempt } = useStudyState();
+  const { state, hydrated, recordAnswer, saveMockAttempt } = useStudyState();
   const [started, setStarted] = useState(false);
   const [resumed, setResumed] = useState(false);
   const [draft, setDraft] = useState<MockDraft>(emptyDraft);
   const [result, setResult] = useState<MockAttempt | null>(null);
   const [rubricChecks, setRubricChecks] = useState<Record<string, number[]>>({});
+  const [checking, setChecking] = useState(false);
+  const [checkingError, setCheckingError] = useState('');
+  const latestAttempt = state.mockAttempts[0];
 
   useEffect(() => {
     let timer: number | undefined;
@@ -427,6 +439,7 @@ export function MockTest() {
   ).length;
   const allComplete =
     answeredCount === mockQuestions.length && openAnsweredCount === openMockTasks.length;
+  const hasAnyAnswer = answeredCount + openAnsweredCount > 0;
 
   function updateAnswer(questionId: string, answer: string) {
     setDraft((current) => ({
@@ -440,26 +453,112 @@ export function MockTest() {
     window.setTimeout(() => window.scrollTo({ top: 0 }), 0);
   }
 
-  function submitMock() {
-    if (!allComplete) return;
+  async function submitMock() {
+    if (!hasAnyAnswer || checking) return;
+    setChecking(true);
+    setCheckingError('');
     const createdAt = new Date().toISOString();
-    const answers = mockQuestions.map((question) => {
+    const localAnswers = mockQuestions.map((question) => {
       const answer = draft.answers[question.id] ?? '';
       const correct = isCorrectAnswer(question, answer);
-      recordAnswer(question, answer, 'mock');
-      return { questionId: question.id, answer, correct };
+      const evaluation: AnswerEvaluation = correct
+        ? {
+            verdict: 'correct',
+            issue: 'none',
+            feedback: question.explanation,
+            correction: question.correctAnswer,
+            source: 'local',
+          }
+        : localIncorrectEvaluation(question.correctAnswer, question.explanation);
+      return { questionId: question.id, answer, correct, evaluation };
     });
+
+    const objectiveCandidates = mockQuestions.filter((question) => {
+      const local = localAnswers.find((answer) => answer.questionId === question.id);
+      return !local?.correct && !question.options && question.kind !== 'true-false';
+    });
+    const aiItems: AnswerEvaluationItem[] = objectiveCandidates
+      .filter((question) => (draft.answers[question.id] ?? '').trim())
+      .map((question) =>
+        questionToEvaluationItem(
+          question,
+          draft.answers[question.id] ?? '',
+          paperTestSections.find((section) => section.questionIds.includes(question.id as never))?.instruction ?? '',
+        ),
+      );
+    for (const task of openMockTasks.filter((item) =>
+      item.section === 'writing' && (draft.openAnswers[item.id] ?? '').trim(),
+    )) {
+      aiItems.push({
+        id: task.id,
+        lesson: task.id.includes('apartment') ? 15 : 16,
+        kind: 'writing',
+        skill: 'writing',
+        topic: task.label,
+        prompt: task.prompt,
+        instruction: 'Napisz kompletny tekst zgodny z poleceniem i wszystkimi kryteriami.',
+        acceptedAnswers: [],
+        expected: task.model,
+        explanation: 'Odpowiedź powinna realizować wszystkie punkty zadania i być poprawna językowo.',
+        answer: draft.openAnswers[task.id] ?? '',
+        rubric: [...task.checklist],
+      });
+    }
+
+    let aiEvaluations = new Map<string, AnswerEvaluation>();
+    try {
+      if (aiItems.length) {
+        const response = await evaluateAnswersWithAi(aiItems);
+        aiEvaluations = new Map(response.evaluations.map((evaluation) => [evaluation.id, evaluation]));
+      }
+    } catch {
+      setCheckingError('AI było chwilowo niedostępne — zadania zamknięte oceniono bezpiecznie według klucza.');
+    }
+
+    const answers = localAnswers.map((item) => {
+      const aiEvaluation = aiEvaluations.get(item.questionId);
+      const evaluation = aiEvaluation ?? item.evaluation;
+      const correct = evaluation.verdict === 'correct';
+      const question = questionById.get(item.questionId);
+      if (question) recordAnswer(question, item.answer, 'mock', correct);
+      return { ...item, correct, evaluation };
+    });
+    const openEvaluations = Object.fromEntries(
+      openMockTasks
+        .filter((task) => task.section === 'writing' && (draft.openAnswers[task.id] ?? '').trim())
+        .map((task) => [
+          task.id,
+          aiEvaluations.get(task.id) ?? localIncorrectEvaluation(task.model, 'AI nie mogło ocenić tej wypowiedzi. Porównaj ją z modelem i kryteriami.'),
+        ]),
+    );
     const attempt: MockAttempt = {
       id: `paper-test-${createdAt}`,
       createdAt,
       score: answers.filter((answer) => answer.correct).length,
       maxScore: answers.length,
       answers,
+      candidateName: draft.candidateName,
+      openAnswers: draft.openAnswers,
+      openEvaluations,
+      answeredCount,
+      openAnsweredCount,
     };
     saveMockAttempt(attempt);
     setResult(attempt);
     setResumed(false);
     window.localStorage.removeItem(DRAFT_KEY);
+    setChecking(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function showSavedAttempt(attempt: MockAttempt) {
+    setDraft({
+      ...emptyDraft,
+      candidateName: attempt.candidateName ?? '',
+      answers: Object.fromEntries(attempt.answers.map((answer) => [answer.questionId, answer.answer])),
+      openAnswers: attempt.openAnswers ?? {},
+    });
+    setResult(attempt);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -470,6 +569,8 @@ export function MockTest() {
     setRubricChecks({});
     setResumed(false);
     setStarted(false);
+    setChecking(false);
+    setCheckingError('');
   }
 
   function toggleRubric(taskId: string, criterionIndex: number) {
@@ -485,7 +586,7 @@ export function MockTest() {
   if (result) {
     const incorrect = result.answers.filter((answer) => !answer.correct);
     const scorePercent = Math.round((result.score / result.maxScore) * 100);
-    const openScore = openMockTasks.reduce(
+    const openScore = openMockTasks.filter((task) => task.section === 'speaking').reduce(
       (score, task) => ({
         correct: score.correct + (rubricChecks[task.id]?.length ?? 0),
         total: score.total + task.checklist.length,
@@ -505,8 +606,12 @@ export function MockTest() {
             title={scorePercent >= 60 ? 'Próg zaliczenia osiągnięty' : 'Wróć do zaznaczonych obszarów'}
             className="my-0"
           >
-            Zadania automatyczne: {scorePercent}%. Pisanie i mówienie oceń według 24 jawnych kryteriów poniżej.
+            Zadania automatyczne: {scorePercent}% całego arkusza. Uzupełniono {result.answeredCount ?? result.answers.filter((answer) => answer.answer.trim()).length} z {result.maxScore} zadań zamkniętych. Odpowiedzi tekstowe i pisanie zostały sprawdzone przez AI.
           </Callout>
+
+          {checkingError ? (
+            <p className="mt-4 text-sm text-amber-700 dark:text-amber-400">{checkingError}</p>
+          ) : null}
 
           <section className="mt-9" aria-labelledby="paper-result-heading">
             <div className="flex items-end justify-between gap-5 border-b-2 border-fd-foreground pb-3">
@@ -555,10 +660,13 @@ export function MockTest() {
                       <div className="space-y-4 text-sm">
                         <p className="font-medium leading-6">{question.prompt}</p>
                         <dl className="grid gap-3 sm:grid-cols-2">
-                          <div><dt className="text-xs text-fd-muted-foreground">Twoja odpowiedź</dt><dd className="mt-1">{item.answer || '—'}</dd></div>
-                          <div><dt className="text-xs text-fd-muted-foreground">Poprawnie</dt><dd className="mt-1 font-medium">{question.correctAnswer}</dd></div>
+                          <div><dt className="text-xs text-fd-muted-foreground">Twoja odpowiedź</dt><dd className={item.answer ? styles.resultWrongAnswer : styles.resultSkipped}>{item.answer || 'Pominięto'}</dd></div>
+                          <div><dt className="text-xs text-fd-muted-foreground">Poprawnie</dt><dd className={styles.resultCorrection}>{item.evaluation?.correction ?? question.correctAnswer}</dd></div>
                         </dl>
-                        <p className="leading-6 text-fd-muted-foreground">{question.explanation}</p>
+                        <p className="leading-6 text-fd-muted-foreground">{item.evaluation?.feedback ?? question.explanation}</p>
+                        {item.evaluation?.source === 'ai' ? (
+                          <p className="flex items-center gap-1.5 text-xs font-semibold text-violet-700"><Sparkles className="size-3.5" aria-hidden="true" /> Dokładna ocena AI</p>
+                        ) : null}
                       </div>
                     </Accordion>
                   );
@@ -574,8 +682,8 @@ export function MockTest() {
           <section className="mt-10" aria-labelledby="open-feedback-heading">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h2 id="open-feedback-heading" className="text-xl font-semibold">Samoocena pisania i mówienia</h2>
-                <p className="mt-2 text-sm text-fd-muted-foreground">Zaznacz tylko kryteria naprawdę widoczne lub słyszalne w odpowiedzi.</p>
+                <h2 id="open-feedback-heading" className="text-xl font-semibold">Ocena pisania i mówienia</h2>
+                <p className="mt-2 text-sm text-fd-muted-foreground">Pisanie sprawdza AI. Przy mówieniu zaznacz tylko kryteria naprawdę słyszalne w odpowiedzi.</p>
               </div>
               <span className="text-sm font-semibold">{openScore.correct}/{openScore.total} kryteriów</span>
             </div>
@@ -584,9 +692,24 @@ export function MockTest() {
                 <article key={task.id} className="border-t border-fd-border pt-5">
                   <h3 className="font-semibold">{task.label}</h3>
                   {task.section === 'writing' ? (
-                    <blockquote className="mt-3 border-l-2 border-fd-border pl-4 text-sm leading-6 whitespace-pre-wrap">{draft.openAnswers[task.id]}</blockquote>
+                    <>
+                      <blockquote className="mt-3 border-l-2 border-fd-border pl-4 text-sm leading-6 whitespace-pre-wrap">{result.openAnswers?.[task.id] ?? draft.openAnswers[task.id]}</blockquote>
+                      {result.openEvaluations?.[task.id] ? (
+                        <div className={cn(styles.openAiFeedback, result.openEvaluations[task.id].verdict === 'correct' && styles.openAiFeedbackCorrect)}>
+                          <Sparkles aria-hidden="true" />
+                          <div>
+                            <strong>{result.openEvaluations[task.id].verdict === 'correct' ? 'Tekst spełnia wymagania' : result.openEvaluations[task.id].verdict === 'almost' ? 'Prawie poprawnie' : 'Tekst wymaga poprawy'}</strong>
+                            <p>{result.openEvaluations[task.id].feedback}</p>
+                            <details>
+                              <summary>Pokaż poprawioną wersję</summary>
+                              <p>{result.openEvaluations[task.id].correction}</p>
+                            </details>
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
                   ) : null}
-                  <div className="mt-4 grid gap-2">
+                  {task.section === 'speaking' ? <div className="mt-4 grid gap-2">
                     {task.checklist.map((criterion, criterionIndex) => {
                       const checked = (rubricChecks[task.id] ?? []).includes(criterionIndex);
                       return (
@@ -596,7 +719,7 @@ export function MockTest() {
                         </label>
                       );
                     })}
-                  </div>
+                  </div> : null}
                   <details className="mt-4 text-sm">
                     <summary className="cursor-pointer font-medium">Pokaż model odpowiedzi</summary>
                     <p className="mt-3 border-l-2 border-fd-primary/40 pl-4 leading-6 text-fd-muted-foreground">{task.model}</p>
@@ -667,6 +790,16 @@ export function MockTest() {
                 <li>• pisanie i mówienie mają jawne kryteria</li>
               </ul>
             </div>
+
+            {latestAttempt ? (
+              <button type="button" onClick={() => showSavedAttempt(latestAttempt)} className={styles.savedAttempt}>
+                <History aria-hidden="true" />
+                <span>
+                  <strong>Ostatni test zapisany · {latestAttempt.score}/{latestAttempt.maxScore} pkt.</strong>
+                  <small>{formatDate(latestAttempt.createdAt)} · kliknij, aby otworzyć wynik i korekty</small>
+                </span>
+              </button>
+            ) : null}
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-4">
@@ -710,8 +843,8 @@ export function MockTest() {
         </div>
         <div className="flex shrink-0 gap-2">
           <button type="button" onClick={resetTest} className="min-h-10 rounded-md border border-fd-border px-3 text-sm font-medium hover:bg-fd-muted">Przerwij</button>
-          <button type="button" onClick={submitMock} disabled={!allComplete} className="inline-flex min-h-10 items-center gap-2 rounded-md bg-fd-primary px-4 text-sm font-medium text-fd-primary-foreground disabled:cursor-not-allowed disabled:opacity-45">
-            <ClipboardCheck className="size-4" aria-hidden="true" /> Oddaj
+          <button type="button" onClick={submitMock} disabled={!hasAnyAnswer || checking} className="inline-flex min-h-10 items-center gap-2 rounded-md bg-fd-primary px-4 text-sm font-medium text-fd-primary-foreground disabled:cursor-not-allowed disabled:opacity-45">
+            {checking ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <ClipboardCheck className="size-4" aria-hidden="true" />} {checking ? 'AI sprawdza…' : 'Oddaj'}
           </button>
         </div>
       </div>
@@ -726,6 +859,16 @@ export function MockTest() {
       </nav>
 
       <div className={styles.paper}>
+        {checking ? (
+          <div className={styles.checkingOverlay} role="status" aria-live="polite">
+            <div>
+              <span className={styles.checkingPen}><Sparkles aria-hidden="true" /></span>
+              <strong>AI sprawdza cały arkusz</strong>
+              <p>Porównuję znaczenie, gramatykę, przypadki, szyk, pisownię i kompletność odpowiedzi.</p>
+              <i />
+            </div>
+          </div>
+        ) : null}
         <header className={styles.paperHeader}>
           <div className={styles.paperMark}>DE<br />A1.2</div>
           <div className={styles.nameField}>
@@ -796,10 +939,10 @@ export function MockTest() {
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-y border-fd-border py-5">
         <p className="text-sm text-fd-muted-foreground">
-          {allComplete ? 'Arkusz jest kompletny i gotowy do oddania.' : `Pozostało: ${missingClosed} odpowiedzi i ${missingOpen} zadań otwartych.`}
+          {allComplete ? 'Arkusz jest kompletny i gotowy do oddania.' : hasAnyAnswer ? `Możesz już sprawdzić częściowy test. Pominięte: ${missingClosed} odpowiedzi i ${missingOpen} zadań otwartych.` : 'Uzupełnij przynajmniej jedną odpowiedź, aby sprawdzić test.'}
         </p>
-        <button type="button" onClick={submitMock} disabled={!allComplete} className="inline-flex min-h-11 items-center gap-2 rounded-md bg-fd-primary px-5 text-sm font-medium text-fd-primary-foreground disabled:cursor-not-allowed disabled:opacity-45">
-          <ClipboardCheck className="size-4" aria-hidden="true" /> Oddaj cały arkusz
+        <button type="button" onClick={submitMock} disabled={!hasAnyAnswer || checking} className="inline-flex min-h-11 items-center gap-2 rounded-md bg-fd-primary px-5 text-sm font-medium text-fd-primary-foreground disabled:cursor-not-allowed disabled:opacity-45">
+          {checking ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <ClipboardCheck className="size-4" aria-hidden="true" />} {checking ? 'AI sprawdza arkusz…' : 'Oddaj cały arkusz'}
         </button>
       </div>
     </StudyPageShell>

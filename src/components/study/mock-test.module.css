@@ -92,9 +92,207 @@
 }
 
 .paper {
+  position: relative;
   width: min(100%, 72rem);
   margin-top: 1rem;
   padding: clamp(1.15rem, 4vw, 3.5rem);
+}
+
+.savedAttempt {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #b8c4ba;
+  background: #f3f8f3;
+  text-align: left;
+}
+
+.savedAttempt:hover {
+  background: #eaf4eb;
+}
+
+.savedAttempt > svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  color: #166534;
+}
+
+.savedAttempt strong,
+.savedAttempt small {
+  display: block;
+}
+
+.savedAttempt strong {
+  font-size: 0.76rem;
+}
+
+.savedAttempt small {
+  margin-top: 0.15rem;
+  color: #526055;
+  font-size: 0.65rem;
+}
+
+.checkingOverlay {
+  position: absolute;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: start center;
+  padding-top: min(22vh, 12rem);
+  background: rgba(255, 254, 249, 0.78);
+  backdrop-filter: blur(2px);
+}
+
+.checkingOverlay > div {
+  position: sticky;
+  top: 10rem;
+  width: min(calc(100% - 2rem), 31rem);
+  padding: 1.3rem 1.4rem;
+  overflow: hidden;
+  border: 1px solid #737373;
+  background: #fffef9;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+.checkingOverlay strong,
+.checkingOverlay p {
+  display: block;
+}
+
+.checkingOverlay strong {
+  margin-top: 0.7rem;
+  font-size: 0.92rem;
+}
+
+.checkingOverlay p {
+  margin-top: 0.35rem;
+  color: #525252;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.checkingOverlay i {
+  display: block;
+  height: 2px;
+  margin-top: 1rem;
+  background: linear-gradient(90deg, transparent, #171717, transparent);
+  animation: testScan 1.25s linear infinite;
+}
+
+.checkingPen {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  margin: auto;
+  place-items: center;
+  border: 1px solid #a3a3a3;
+  border-radius: 50%;
+  animation: checkingPulse 1s ease-in-out infinite alternate;
+}
+
+.checkingPen svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.resultWrongAnswer,
+.resultCorrection,
+.resultSkipped {
+  position: relative;
+  margin-top: 0.25rem;
+}
+
+.resultWrongAnswer {
+  display: inline-block;
+  color: #991b1b;
+}
+
+.resultWrongAnswer::after {
+  position: absolute;
+  right: -0.08rem;
+  bottom: 45%;
+  left: -0.08rem;
+  height: 1.5px;
+  background: #dc2626;
+  content: '';
+  transform: rotate(-1.5deg) scaleX(0);
+  transform-origin: left;
+  animation: resultStrike 420ms 120ms ease-out forwards;
+}
+
+.resultCorrection {
+  color: #166534;
+  font-family: "Segoe Print", "Bradley Hand", cursive;
+  font-weight: 700;
+  opacity: 0;
+  animation: resultWrite 440ms 450ms ease-out forwards;
+}
+
+.resultSkipped {
+  color: #92400e;
+  font-style: italic;
+}
+
+.openAiFeedback {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #f0b36a;
+  background: #fff8ed;
+  color: #7c2d12;
+  font-size: 0.75rem;
+}
+
+.openAiFeedbackCorrect {
+  border-color: #86b99a;
+  background: #f3fbf5;
+  color: #14532d;
+}
+
+.openAiFeedback > svg {
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.1rem;
+}
+
+.openAiFeedback p {
+  margin-top: 0.25rem;
+  line-height: 1.55;
+}
+
+.openAiFeedback details {
+  margin-top: 0.5rem;
+}
+
+.openAiFeedback summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+@keyframes testScan {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes checkingPulse {
+  from { transform: scale(0.94) rotate(-3deg); }
+  to { transform: scale(1.04) rotate(3deg); }
+}
+
+@keyframes resultStrike {
+  to { transform: rotate(-1.5deg) scaleX(1); }
+}
+
+@keyframes resultWrite {
+  from { opacity: 0; transform: translateY(0.25rem); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .paperHeader {
@@ -475,5 +673,22 @@
 
   .paperSection {
     break-inside: avoid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkingOverlay i,
+  .checkingPen,
+  .resultWrongAnswer::after,
+  .resultCorrection {
+    animation: none;
+  }
+
+  .resultWrongAnswer::after {
+    transform: rotate(-1.5deg) scaleX(1);
+  }
+
+  .resultCorrection {
+    opacity: 1;
   }
 }

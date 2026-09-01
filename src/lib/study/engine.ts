@@ -34,6 +34,7 @@ export function createInitialState(): StudyState {
     attempts: [],
     mistakes: [],
     mockAttempts: [],
+    practiceSessions: [],
   };
 }
 

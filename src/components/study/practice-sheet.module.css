@@ -238,6 +238,9 @@
   border-radius: 50%;
   font-size: 0.62rem;
   font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  transform: translateY(-0.01rem);
 }
 
 .optionSelected {
@@ -360,6 +363,119 @@
 .teacherNote .mutedNote {
   color: #7f1d1d;
   opacity: 0.75;
+}
+
+.animatedCorrection {
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 0.4rem;
+  padding: 0.45rem 0.55rem;
+  border-left: 2px solid #dc2626;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.animatedCorrection p {
+  margin-top: 0;
+}
+
+.animatedCorrection del {
+  position: relative;
+  text-decoration: none;
+  color: #7f1d1d;
+}
+
+.animatedCorrection del::after {
+  position: absolute;
+  right: -0.08rem;
+  bottom: 45%;
+  left: -0.08rem;
+  height: 1.5px;
+  background: #dc2626;
+  content: '';
+  transform: rotate(-1.5deg) scaleX(0);
+  transform-origin: left;
+  animation: strikeAnswer 420ms 120ms ease-out forwards;
+}
+
+.animatedCorrection ins {
+  color: #166534;
+  font-family: "Segoe Print", "Bradley Hand", cursive;
+  font-weight: 800;
+  text-decoration: none;
+  opacity: 0;
+  animation: writeCorrection 440ms 470ms ease-out forwards;
+}
+
+.evaluationSource,
+.aiBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.evaluationSource svg,
+.aiBadge svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+.aiBadge {
+  margin-top: 0.5rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid #86b99a;
+  background: white;
+}
+
+.checkingNote {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 1.5rem 0 0 2.2rem;
+  padding: 0.85rem 1rem;
+  overflow: hidden;
+  border: 1px solid #9ca3af;
+  background: #f5f5f2;
+  color: #374151;
+  font-size: 0.72rem;
+}
+
+.checkingNote::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #171717, transparent);
+  content: '';
+  animation: checkingSweep 1.15s linear infinite;
+}
+
+.checkingNote > svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes strikeAnswer {
+  to { transform: rotate(-1.5deg) scaleX(1); }
+}
+
+@keyframes writeCorrection {
+  from { opacity: 0; transform: translateY(0.25rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes checkingSweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .correctNote small {
@@ -537,6 +653,7 @@
   .teacherNote,
   .correctNote,
   .retryMessage,
+  .checkingNote,
   .checkButton,
   .nextButton {
     margin-left: 0;
@@ -544,6 +661,23 @@
 
   .option {
     padding-inline: 0.35rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animatedCorrection del::after,
+  .animatedCorrection ins,
+  .checkingNote::after,
+  .checkingNote > svg {
+    animation: none;
+  }
+
+  .animatedCorrection del::after {
+    transform: rotate(-1.5deg) scaleX(1);
+  }
+
+  .animatedCorrection ins {
+    opacity: 1;
   }
 }
 

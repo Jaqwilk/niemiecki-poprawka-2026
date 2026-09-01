@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Check, Play, ShieldCheck, Sparkles } from 'lucide-react';
+import { Check, History, Play, ShieldCheck, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { selectRecommendedQuestions } from '@/lib/study/engine';
 import {
@@ -11,6 +11,12 @@ import {
   practiceQuestions,
 } from '@/lib/study/practice';
 import { sprintDays } from '@/lib/study/schedule';
+import {
+  createPracticeDraft,
+  loadPracticeDraft,
+  savePracticeDraft,
+  type PracticeDraft,
+} from '@/lib/study/practice-session-storage';
 import { LESSONS, type LessonNumber, type StudyQuestion } from '@/lib/study/types';
 import { PracticeSheet } from './practice-sheet';
 import { StudyPageShell } from './page-shell';
@@ -43,8 +49,29 @@ export function PracticeView() {
   const { state, hydrated } = useStudyState();
   const [scope, setScope] = useState('recommended');
   const [session, setSession] = useState<StudyQuestion[] | null>(null);
+  const [sessionDraft, setSessionDraft] = useState<PracticeDraft | null>(null);
+  const restoreChecked = useRef(false);
   const openMistakes = state.mistakes.filter((mistake) => mistake.status === 'open');
   const activeDay = sprintDays[state.activeDay - 1];
+  const latestSession = state.practiceSessions[0];
+
+  useEffect(() => {
+    if (!hydrated || session || restoreChecked.current) return;
+    restoreChecked.current = true;
+    const saved = loadPracticeDraft();
+    if (!saved) return;
+    const questionMap = new Map(practiceQuestions.map((question) => [question.id, question]));
+    const restored = saved.questionIds
+      .map((id) => questionMap.get(id))
+      .filter((question): question is StudyQuestion => Boolean(question));
+    if (restored.length !== saved.questionIds.length) return;
+    const timer = window.setTimeout(() => {
+      setScope(saved.scope);
+      setSessionDraft(saved);
+      setSession(restored);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [hydrated, session]);
 
   const previewCount = useMemo(() => {
     if (scope === 'recommended' || scope === 'mixed') return 12;
@@ -59,18 +86,28 @@ export function PracticeView() {
         : `Wszystkie rozłączne ćwiczenia przygotowane dla Lektion ${scope}.`;
 
   function start() {
+    let selectedQuestions: StudyQuestion[];
     if (scope === 'recommended') {
-      setSession(selectRecommendedQuestions(practiceQuestions, state, 12));
+      selectedQuestions = selectRecommendedQuestions(practiceQuestions, state, 12);
     } else if (scope === 'mixed') {
-      setSession(selectRecommendedQuestions(practiceQuestions, { ...state, activeDay: 4 }, 12));
+      selectedQuestions = selectRecommendedQuestions(practiceQuestions, { ...state, activeDay: 4 }, 12);
     } else {
-      setSession(getPracticeQuestionsForLesson(Number(scope) as LessonNumber));
+      selectedQuestions = getPracticeQuestionsForLesson(Number(scope) as LessonNumber);
     }
+    const nextDraft = createPracticeDraft(
+      scope,
+      getScopeLabel(scope),
+      selectedQuestions.map((question) => question.id),
+    );
+    savePracticeDraft(nextDraft);
+    setSessionDraft(nextDraft);
+    setSession(selectedQuestions);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function leaveSession() {
     setSession(null);
+    setSessionDraft(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -87,7 +124,8 @@ export function PracticeView() {
         {session ? (
           <PracticeSheet
             questions={session}
-            scopeLabel={getScopeLabel(scope)}
+            draft={sessionDraft}
+            scopeLabel={sessionDraft?.scopeLabel ?? getScopeLabel(scope)}
             onLeave={leaveSession}
           />
         ) : (
@@ -194,6 +232,19 @@ export function PracticeView() {
                 <small>ok. {Math.max(6, Math.round(previewCount * 0.8))} min</small>
               </div>
             </section>
+
+            {latestSession ? (
+              <div className={styles.savedSession}>
+                <History aria-hidden="true" />
+                <div>
+                  <strong>Ostatni ukończony arkusz jest zapisany</strong>
+                  <span>
+                    {latestSession.scopeLabel} · {latestSession.score}/{latestSession.maxScore} bez poprawki ·{' '}
+                    {new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium' }).format(new Date(latestSession.completedAt))}
+                  </span>
+                </div>
+              </div>
+            ) : null}
 
             {scope === 'recommended' ? (
               <div className={styles.recommendationNote}>

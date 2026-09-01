@@ -5,6 +5,7 @@ RewriteEngine On
 RewriteRule ^api/tutor/?$ api/tutor.php [L,QSA]
 RewriteRule ^api/search/?$ api/search.php [L,QSA]
 RewriteRule ^api/flashcards/evaluate/?$ api/flashcards-evaluate.php [L,QSA]
+RewriteRule ^api/answers/evaluate/?$ api/answers-evaluate.php [L,QSA]
 
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"

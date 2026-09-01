@@ -68,6 +68,14 @@ describe('mistake lifecycle', () => {
   });
 });
 
+describe('saved worksheet collections', () => {
+  it('initializes independent histories for tests and practice sheets', () => {
+    const state = createInitialState();
+    expect(state.mockAttempts).toEqual([]);
+    expect(state.practiceSessions).toEqual([]);
+  });
+});
+
 describe('adaptive selection', () => {
   it('prioritizes an open repeated mistake', () => {
     const other = { ...question, id: 'test-other', lesson: 13 as const, topic: 'es gibt' };

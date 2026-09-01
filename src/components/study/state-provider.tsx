@@ -17,7 +17,13 @@ import {
   resolveMistake,
 } from '@/lib/study/engine';
 import { loadStudyState, saveStudyState, subscribeToStudyState } from '@/lib/study/storage';
-import type { LessonNumber, MockAttempt, StudyQuestion, StudyState } from '@/lib/study/types';
+import type {
+  LessonNumber,
+  MockAttempt,
+  PracticeSession,
+  StudyQuestion,
+  StudyState,
+} from '@/lib/study/types';
 
 type AnswerMode = 'practice' | 'retry' | 'mock';
 
@@ -27,8 +33,14 @@ type StudyContextValue = {
   setActiveDay: (day: StudyState['activeDay']) => void;
   startSprint: () => void;
   setLessonProgress: (lesson: LessonNumber, progress: number) => void;
-  recordAnswer: (question: StudyQuestion, answer: string, mode?: AnswerMode) => boolean;
+  recordAnswer: (
+    question: StudyQuestion,
+    answer: string,
+    mode?: AnswerMode,
+    evaluatedCorrect?: boolean,
+  ) => boolean;
   saveMockAttempt: (attempt: MockAttempt) => void;
+  savePracticeSession: (session: PracticeSession) => void;
 };
 
 const StudyContext = createContext<StudyContextValue | null>(null);
@@ -84,8 +96,13 @@ export function StudyStateProvider({ children }: { children: ReactNode }) {
   );
 
   const recordAnswer = useCallback(
-    (question: StudyQuestion, answer: string, mode: AnswerMode = 'practice') => {
-      const correct = isCorrectAnswer(question, answer);
+    (
+      question: StudyQuestion,
+      answer: string,
+      mode: AnswerMode = 'practice',
+      evaluatedCorrect?: boolean,
+    ) => {
+      const correct = evaluatedCorrect ?? isCorrectAnswer(question, answer);
       const createdAt = new Date().toISOString();
       update((current) => {
         let next = appendAttempt(current, {
@@ -114,6 +131,18 @@ export function StudyStateProvider({ children }: { children: ReactNode }) {
     [update],
   );
 
+  const savePracticeSession = useCallback(
+    (session: PracticeSession) =>
+      update((current) => ({
+        ...current,
+        practiceSessions: [
+          session,
+          ...current.practiceSessions.filter((item) => item.id !== session.id),
+        ].slice(0, 30),
+      })),
+    [update],
+  );
+
   const value = useMemo(
     () => ({
       state,
@@ -123,11 +152,13 @@ export function StudyStateProvider({ children }: { children: ReactNode }) {
       setLessonProgress,
       recordAnswer,
       saveMockAttempt,
+      savePracticeSession,
     }),
     [
       hydrated,
       recordAnswer,
       saveMockAttempt,
+      savePracticeSession,
       setActiveDay,
       setLessonProgress,
       startSprint,

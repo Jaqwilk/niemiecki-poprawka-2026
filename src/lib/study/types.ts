@@ -69,6 +69,22 @@ export type MockAnswer = {
   questionId: string;
   answer: string;
   correct: boolean;
+  evaluation?: AnswerEvaluation;
+};
+
+export type AnswerEvaluation = {
+  verdict: 'correct' | 'almost' | 'incorrect';
+  issue:
+    | 'none'
+    | 'equivalent'
+    | 'spelling'
+    | 'grammar'
+    | 'word_order'
+    | 'missing_part'
+    | 'different_meaning';
+  feedback: string;
+  correction: string;
+  source: 'ai' | 'local';
 };
 
 export type MockAttempt = {
@@ -77,6 +93,21 @@ export type MockAttempt = {
   score: number;
   maxScore: number;
   answers: MockAnswer[];
+  candidateName?: string;
+  openAnswers?: Record<string, string>;
+  openEvaluations?: Record<string, AnswerEvaluation>;
+  answeredCount?: number;
+  openAnsweredCount?: number;
+};
+
+export type PracticeSession = {
+  id: string;
+  createdAt: string;
+  completedAt: string;
+  scopeLabel: string;
+  score: number;
+  maxScore: number;
+  questionIds: string[];
 };
 
 export type StudyState = {
@@ -87,6 +118,7 @@ export type StudyState = {
   attempts: Attempt[];
   mistakes: MistakeRecord[];
   mockAttempts: MockAttempt[];
+  practiceSessions: PracticeSession[];
 };
 
 export type SprintDay = {
