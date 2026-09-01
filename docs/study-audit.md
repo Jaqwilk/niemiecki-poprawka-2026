@@ -74,7 +74,7 @@ W pełnym PDF numer strony pliku jest o 2 większy od numeru drukowanego. Poniż
 
 - **Temat:** zdrowie, części ciała, dolegliwości, sport i rady.
 - **Słownictwo:** ciało, objawy, ból, leki, zdrowe nawyki, sport.
-- **Gramatyka:** czasowniki rozdzielnie złożone, szczególnie `aufstehen`, w zdaniach oznajmujących i pytaniach; Imperativ `Sie`; partykuły `mal/doch mal`; `kann/soll/will`; `sollen` jako przekazywanie rady.
+- **Gramatyka:** czasowniki rozdzielnie złożone, szczególnie `aufstehen`, w zdaniach oznajmujących i pytaniach; Imperativ `Sie`; partykuły `mal/doch mal`; `kann/soll/will`; `sollen` jako przekazywanie rady; w materiale nauczyciela także kontrast `müssen/sollen`.
 - **Komunikacja:** opis dolegliwości, prośba o pomoc, rada i zalecenie, rozmowa w aptece lub u lekarza.
 - **Produkcja:** porada zdrowotna, opis ilustracji, krótka wypowiedź o zdrowych nawykach.
 - **Ćwiczenia:** części ciała, synonimy dolegliwości, dialogi, rozdzielanie czasownika, tryb rozkazujący, modalne, intonacja pytania i rady.
@@ -104,7 +104,7 @@ Wersja poprawiona rozdziela treść na dwie warstwy:
 | 15 | pomieszczenia, meble, położenie w domu, ogłoszenia i skróty, `sein-/ihr-`, dwa formaty pisania, `ä/äu`, GiE | kompletne |
 | 16 | problemy i urządzenia, pomoc, serwis, `in/vor/nach`, terminy, e-mail, telefon, opis windy, `o/u` | kompletne |
 | 17 | zawody, praca i plany, pewność zamiaru, `werden`, `wollen`, `mit/ohne`, blog, akcent słów międzynarodowych | kompletne |
-| 18 | ciało, objawy, leczenie, `aufstehen`, Imperativ, trzy modalne, porady, intonacja, `dies-`, `denn`, `um … zu`, opis ilustracji | kompletne |
+| 18 | ciało, objawy, leczenie, `aufstehen`, Imperativ, modalne i kontrast `müssen/sollen`, porady, intonacja, `dies-`, `denn`, `um … zu`, opis ilustracji | kompletne |
 
 Przy okazji usunięto z podstawowego banku pytań przykłady niezwiązane
 bezpośrednio ze słownictwem źródłowym i zastąpiono je słowami oraz sytuacjami z
@@ -132,6 +132,7 @@ Te elementy należy pokazać i ćwiczyć, ale oznaczyć jako dodatek nauczyciela
 - odmiana wskazująca `dieser/diese/dieses`;
 - zdania z `denn`;
 - konstrukcja celu `um … zu`;
+- przypomnienie `müssen` i odróżnienie konieczności od rady przez `sollen`;
 - bardziej rozbudowany język opisu ilustracji (`im Vordergrund`, `im Hintergrund`, przypuszczenia i emocje).
 
 ## Mapa słownictwa
