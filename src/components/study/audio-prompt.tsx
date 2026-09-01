@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Volume2 } from 'lucide-react';
 
-export function AudioPrompt({ text }: { text: string }) {
+export function AudioPrompt({ text, compact = false }: { text: string; compact?: boolean }) {
   const [status, setStatus] = useState<'idle' | 'speaking' | 'unavailable'>('idle');
 
   useEffect(() => () => window.speechSynthesis?.cancel(), []);
@@ -28,19 +28,21 @@ export function AudioPrompt({ text }: { text: string }) {
   }
 
   return (
-    <div className="mb-6 rounded-lg border border-fd-border bg-fd-muted/35 p-4">
+    <div className={compact ? 'mb-3 border border-neutral-300 bg-neutral-100 p-3' : 'mb-6 rounded-lg border border-fd-border bg-fd-muted/35 p-4'}>
       <button
         type="button"
         onClick={play}
         disabled={status === 'speaking'}
-        className="inline-flex min-h-10 items-center gap-2 rounded-md border border-fd-border bg-fd-background px-3 text-sm font-medium hover:bg-fd-muted disabled:opacity-55"
+        className={compact ? 'inline-flex min-h-9 items-center gap-2 border border-neutral-400 bg-white px-3 text-xs font-semibold hover:bg-neutral-50 disabled:opacity-55' : 'inline-flex min-h-10 items-center gap-2 rounded-md border border-fd-border bg-fd-background px-3 text-sm font-medium hover:bg-fd-muted disabled:opacity-55'}
       >
         <Volume2 className="size-4 text-fd-primary" aria-hidden="true" />
         {status === 'speaking' ? 'Odtwarzanie…' : 'Odtwórz nagranie'}
       </button>
-      <p className="mt-2 text-xs leading-5 text-fd-muted-foreground">
-        Możesz odsłuchać tekst kilka razy. Głos niemiecki generuje przeglądarka.
-      </p>
+      {!compact ? (
+        <p className="mt-2 text-xs leading-5 text-fd-muted-foreground">
+          Możesz odsłuchać tekst kilka razy. Głos niemiecki generuje przeglądarka.
+        </p>
+      ) : null}
       {status === 'unavailable' ? (
         <p className="mt-2 text-xs text-red-700 dark:text-red-400" role="alert">
           Ta przeglądarka nie udostępniła syntezy mowy. Otwórz zadanie w aktualnym Chrome lub Edge.

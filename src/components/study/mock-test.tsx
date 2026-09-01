@@ -3,61 +3,94 @@
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Check, ClipboardCheck, Save } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  ClipboardCheck,
+  FileText,
+  RotateCcw,
+  Save,
+} from 'lucide-react';
 import { Accordion, Accordions } from 'fumadocs-ui/components/accordion';
 import { Callout } from 'fumadocs-ui/components/callout';
 import { cn } from '@/lib/cn';
 import { isCorrectAnswer } from '@/lib/study/engine';
-import { mockQuestions, openMockTasks, type OpenMockTask } from '@/lib/study/mock';
-import type { MockAttempt, StudyQuestion, StudySkill } from '@/lib/study/types';
+import {
+  matchingAnswerBank,
+  mockQuestions,
+  openMockTasks,
+  paperTestSections,
+  type OpenMockTask,
+  type PaperTestSection,
+} from '@/lib/study/mock';
+import type { MockAttempt, StudyQuestion } from '@/lib/study/types';
 import { AudioPrompt } from './audio-prompt';
 import { StudyPageShell } from './page-shell';
 import { RouteMap } from './index';
 import { useStudyState } from './state-provider';
 import { VoiceRecorder } from './voice-recorder';
+import styles from './mock-test.module.css';
 
-const DRAFT_KEY = 'deutsch-a1-2-mock-draft-v2';
-
-type ExamSection = 'listening' | 'reading' | 'writing' | 'speaking' | 'language';
+const DRAFT_KEY = 'deutsch-a1-2-paper-test-v3';
 
 type MockDraft = {
-  index: number;
   answers: Record<string, string>;
   openAnswers: Record<string, string>;
   completedOpen: Record<string, boolean>;
+  candidateName: string;
 };
 
-const emptyDraft: MockDraft = { index: 0, answers: {}, openAnswers: {}, completedOpen: {} };
-
-const skillLabels: Record<StudySkill, string> = {
-  vocabulary: 'słownictwo',
-  grammar: 'gramatyka',
-  listening: 'słuchanie',
-  reading: 'czytanie',
-  writing: 'pisanie',
-  speaking: 'mówienie',
-  communication: 'komunikacja',
+const emptyDraft: MockDraft = {
+  answers: {},
+  openAnswers: {},
+  completedOpen: {},
+  candidateName: '',
 };
 
-const sectionLabels: Record<ExamSection, string> = {
-  listening: 'Słuchanie',
-  reading: 'Czytanie',
-  writing: 'Pisanie',
-  speaking: 'Mówienie',
-  language: 'Gramatyka i słownictwo',
-};
+const questionById = new Map(mockQuestions.map((question) => [question.id, question]));
 
-function getExamSection(question: StudyQuestion): ExamSection {
-  if (question.skill === 'listening') return 'listening';
-  if (question.skill === 'reading') return 'reading';
-  return 'language';
+function sectionNavLabel(title: string) {
+  return title
+    .replace('HÖRVERSTEHEN', 'HÖREN')
+    .replace('LESEVERSTEHEN', 'LESEN')
+    .replace('GRAMMATIK', 'GRAM.');
+}
+
+function getSectionQuestions(section: PaperTestSection) {
+  return section.questionIds.map((id) => {
+    const question = questionById.get(id);
+    if (!question) throw new Error(`Missing paper question: ${id}`);
+    return question;
+  });
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(value));
+}
+
+function normalizeDraft(value: unknown): MockDraft | null {
+  if (!value || typeof value !== 'object') return null;
+  const draft = value as Partial<MockDraft>;
+  return {
+    answers: draft.answers && typeof draft.answers === 'object' ? draft.answers : {},
+    openAnswers:
+      draft.openAnswers && typeof draft.openAnswers === 'object' ? draft.openAnswers : {},
+    completedOpen:
+      draft.completedOpen && typeof draft.completedOpen === 'object' ? draft.completedOpen : {},
+    candidateName: typeof draft.candidateName === 'string' ? draft.candidateName : '',
+  };
 }
 
 function OpenTaskVisual({ task }: { task: OpenMockTask }) {
   if (task.visual === 'map') return <RouteMap />;
+
   if (task.visual === 'photo') {
     return (
-      <figure className="mt-5 overflow-hidden rounded-xl border border-fd-border bg-fd-card">
+      <figure className="mt-5 overflow-hidden border border-neutral-300 bg-white">
         <Image
           src="/exam/office-health.svg"
           alt="Mężczyzna wykonuje ćwiczenia w biurze, a kobieta obserwuje go przy biurku."
@@ -65,32 +98,37 @@ function OpenTaskVisual({ task }: { task: OpenMockTask }) {
           height={600}
           className="h-auto w-full"
         />
-        <figcaption className="border-t border-fd-border px-4 py-3 text-xs text-fd-muted-foreground">
-          Ilustracja egzaminacyjna — najpierw opisz to, co naprawdę widzisz, później dodaj przypuszczenie.
+        <figcaption className="border-t border-neutral-300 px-4 py-2 text-xs text-neutral-600">
+          Prüfungsbild: Beschreiben Sie zuerst, was Sie wirklich sehen.
         </figcaption>
       </figure>
     );
   }
+
   if (task.visual === 'calendar') {
     return (
-      <div className="mt-5 overflow-hidden rounded-xl border border-fd-border">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-fd-muted/60 text-xs text-fd-muted-foreground">
-            <tr><th className="px-4 py-3 font-medium">Dzień</th><th className="px-4 py-3 font-medium">Kalendarz</th></tr>
+      <div className="mt-5 overflow-hidden border border-neutral-300">
+        <table className="w-full border-collapse text-left text-sm">
+          <thead className="bg-neutral-100 text-xs uppercase tracking-wide text-neutral-600">
+            <tr>
+              <th className="border-b border-neutral-300 px-4 py-2 font-semibold">Tag</th>
+              <th className="border-b border-neutral-300 px-4 py-2 font-semibold">Kalender</th>
+            </tr>
           </thead>
-          <tbody className="divide-y divide-fd-border">
-            <tr><td className="px-4 py-3 font-medium">Dienstag</td><td className="px-4 py-3">10:00 Zahnarzt · termin do zmiany</td></tr>
-            <tr><td className="px-4 py-3 font-medium">Mittwoch</td><td className="px-4 py-3">ganztägig Kurs</td></tr>
-            <tr><td className="px-4 py-3 font-medium">Donnerstag</td><td className="px-4 py-3">ab 14:00 frei</td></tr>
+          <tbody>
+            <tr><td className="border-b border-neutral-200 px-4 py-2 font-medium">Dienstag</td><td className="border-b border-neutral-200 px-4 py-2">10:00 Zahnarzt · Termin ändern</td></tr>
+            <tr><td className="border-b border-neutral-200 px-4 py-2 font-medium">Mittwoch</td><td className="border-b border-neutral-200 px-4 py-2">ganztägig Kurs</td></tr>
+            <tr><td className="px-4 py-2 font-medium">Donnerstag</td><td className="px-4 py-2">ab 14:00 frei</td></tr>
           </tbody>
         </table>
       </div>
     );
   }
+
   if (task.visual === 'card') {
     return (
-      <div className="mt-5 rounded-xl border border-fd-primary/30 bg-fd-primary/6 p-5 text-sm">
-        <p className="text-xs font-semibold tracking-wide text-fd-muted-foreground uppercase">Karta ucznia</p>
+      <div className="mt-5 border border-neutral-300 bg-neutral-100 p-4 text-sm">
+        <p className="text-xs font-bold tracking-[0.12em] uppercase">Situationskarte</p>
         <ul className="mt-3 list-disc space-y-1 pl-5 leading-6">
           <li>seit zwei Wochen schlecht schlafen</li>
           <li>tagsüber müde sein</li>
@@ -100,44 +138,236 @@ function OpenTaskVisual({ task }: { task: OpenMockTask }) {
       </div>
     );
   }
+
   if (task.visual === 'apartment') {
     return (
-      <div className="mt-5 rounded-xl border border-fd-border bg-fd-card p-5 text-sm leading-7">
-        <p className="font-semibold">WG-Zimmer im Zentrum</p>
-        <p className="mt-1 text-fd-muted-foreground">18 m² · möbliert · Balkon · 490 Euro inkl. NK</p>
+      <div className="mt-5 border border-neutral-300 bg-neutral-100 p-4 text-sm leading-7">
+        <p className="font-bold">WG-ZIMMER IM ZENTRUM</p>
+        <p>18 m² · möbliert · Balkon · 490 Euro inkl. NK</p>
       </div>
     );
   }
+
   return null;
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('pl-PL', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
+type AnswerControlProps = {
+  question: StudyQuestion;
+  value: string;
+  layout: PaperTestSection['layout'];
+  number: number;
+  onChange: (answer: string) => void;
+};
+
+function InlineGap({
+  question,
+  value,
+  number,
+  onChange,
+}: Omit<AnswerControlProps, 'layout'>) {
+  const [before, after = ''] = question.prompt.split('___');
+  return (
+    <label className={styles.inlineQuestion}>
+      <span className={styles.questionNumber}>{number}</span>
+      <span>{before}</span>
+      {question.options ? (
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          aria-label={`Odpowiedź do zadania ${number}`}
+          className={styles.inlineSelect}
+        >
+          <option value="">—</option>
+          {question.options.map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
+      ) : (
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          aria-label={`Odpowiedź do zadania ${number}`}
+          autoComplete="off"
+          className={styles.inlineInput}
+        />
+      )}
+      <span>{after}</span>
+    </label>
+  );
 }
 
-function normalizeDraft(value: unknown): MockDraft | null {
-  if (!value || typeof value !== 'object') return null;
-  const draft = value as Partial<MockDraft>;
-  const index = Number.isInteger(draft.index)
-    ? Math.max(0, Math.min(mockQuestions.length, draft.index as number))
-    : 0;
-  return {
-    index,
-    answers: draft.answers && typeof draft.answers === 'object' ? draft.answers : {},
-    openAnswers:
-      draft.openAnswers && typeof draft.openAnswers === 'object' ? draft.openAnswers : {},
-    completedOpen:
-      draft.completedOpen && typeof draft.completedOpen === 'object' ? draft.completedOpen : {},
-  };
+function ChoiceControl({ question, value, number, onChange }: Omit<AnswerControlProps, 'layout'>) {
+  return (
+    <fieldset className="mt-3">
+      <legend className="sr-only">Odpowiedź do zadania {number}</legend>
+      <div className="flex flex-wrap gap-x-5 gap-y-2">
+        {question.options?.map((option, optionIndex) => (
+          <label key={option} className={styles.choiceLabel}>
+            <input
+              type="radio"
+              name={question.id}
+              value={option}
+              checked={value === option}
+              onChange={() => onChange(option)}
+              className="size-4 accent-neutral-900"
+            />
+            <span className="font-semibold">{String.fromCharCode(65 + optionIndex)}</span>
+            <span>{option}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+function StandardQuestion({ question, value, layout, number, onChange }: AnswerControlProps) {
+  if (layout === 'gaps' || layout === 'cloze') {
+    return <InlineGap question={question} value={value} number={number} onChange={onChange} />;
+  }
+
+  if (layout === 'sentences') {
+    return (
+      <div className={styles.sentenceQuestion}>
+        <div className="flex gap-3">
+          <span className={styles.questionNumber}>{number}</span>
+          <div className="min-w-0 flex-1">
+            <p className="leading-6">{question.prompt}</p>
+            {question.tokens ? (
+              <p className="mt-1 text-xs italic text-neutral-600">{question.tokens.join(' – ')}</p>
+            ) : null}
+            <label>
+              <span className="sr-only">Pełne zdanie do zadania {number}</span>
+              <input
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                autoComplete="off"
+                className={styles.sentenceInput}
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.blockQuestion}>
+      <div className="flex gap-3">
+        <span className={styles.questionNumber}>{number}</span>
+        <p className="min-w-0 flex-1 whitespace-pre-line leading-6">{question.prompt}</p>
+      </div>
+      {question.options ? (
+        <ChoiceControl question={question} value={value} number={number} onChange={onChange} />
+      ) : (
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          aria-label={`Odpowiedź do zadania ${number}`}
+          autoComplete="off"
+          className={styles.sentenceInput}
+        />
+      )}
+    </div>
+  );
+}
+
+function PaperSectionHeader({ section }: { section: PaperTestSection }) {
+  return (
+    <header className={styles.sectionHeader}>
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 id={`${section.id}-heading`}>{section.title}</h2>
+        <span>{section.questionIds.length} Pkt.</span>
+      </div>
+      <p>{section.instruction}</p>
+    </header>
+  );
+}
+
+function ObjectivePaperSection({
+  section,
+  draft,
+  updateAnswer,
+}: {
+  section: PaperTestSection;
+  draft: MockDraft;
+  updateAnswer: (questionId: string, answer: string) => void;
+}) {
+  const questions = getSectionQuestions(section);
+
+  return (
+    <section id={section.id} className={styles.paperSection} aria-labelledby={`${section.id}-heading`}>
+      <PaperSectionHeader section={section} />
+
+      {section.layout === 'cloze' && 'wordBank' in section ? (
+        <div className={styles.wordBank} aria-label="Bank wyrazów">
+          {section.wordBank.map((word) => <span key={word}>{word}</span>)}
+        </div>
+      ) : null}
+
+      {section.layout === 'matching' ? (
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,0.82fr)]">
+          <div className="overflow-hidden border border-neutral-300">
+            <table className={styles.matchingTable}>
+              <tbody>
+                {questions.map((question, index) => (
+                  <tr key={question.id}>
+                    <td>{index + 1}</td>
+                    <th scope="row">{question.prompt}</th>
+                    <td>
+                      <label>
+                        <span className="sr-only">Dopasowanie do zadania {index + 1}</span>
+                        <select
+                          value={draft.answers[question.id] ?? ''}
+                          onChange={(event) => updateAnswer(question.id, event.target.value)}
+                          className={styles.matchSelect}
+                        >
+                          <option value="">—</option>
+                          {matchingAnswerBank.map((answer) => (
+                            <option key={answer.code} value={answer.label}>{answer.code}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="overflow-hidden border border-neutral-300 self-start">
+            <table className={styles.answerBankTable}>
+              <tbody>
+                {matchingAnswerBank.map((answer) => (
+                  <tr key={answer.code}>
+                    <td>{answer.code}</td>
+                    <td>{answer.label}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className={cn(styles.questionList, section.layout === 'cloze' && styles.clozeText)}>
+          {questions.map((question, index) => (
+            <div key={question.id}>
+              {section.layout === 'listening' && question.audioText ? (
+                <AudioPrompt text={question.audioText} compact />
+              ) : null}
+              <StandardQuestion
+                question={question}
+                value={draft.answers[question.id] ?? ''}
+                layout={section.layout}
+                number={index + 1}
+                onChange={(answer) => updateAnswer(question.id, answer)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
 
 export function MockTest() {
-  const { state, hydrated, recordAnswer, saveMockAttempt } = useStudyState();
+  const { hydrated, recordAnswer, saveMockAttempt } = useStudyState();
   const [started, setStarted] = useState(false);
   const [resumed, setResumed] = useState(false);
   const [draft, setDraft] = useState<MockDraft>(emptyDraft);
@@ -169,35 +399,20 @@ export function MockTest() {
     try {
       window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } catch {
-      // Nauka nadal działa, nawet jeśli przeglądarka zablokuje pamięć lokalną.
+      // Arkusz działa dalej także przy zablokowanej pamięci lokalnej.
     }
   }, [draft, started]);
 
-  const lessonScores = useMemo(() => {
-    if (!result) return [];
-    const grouped = new Map<number, { correct: number; total: number }>();
-    for (const item of result.answers) {
-      const question = mockQuestions.find((candidate) => candidate.id === item.questionId);
-      if (!question) continue;
-      const group = grouped.get(question.lesson) ?? { correct: 0, total: 0 };
-      group.total += 1;
-      if (item.correct) group.correct += 1;
-      grouped.set(question.lesson, group);
-    }
-    return [...grouped.entries()].map(([lesson, score]) => ({ lesson, ...score }));
-  }, [result]);
-
   const objectiveSectionScores = useMemo(() => {
-    const grouped = new Map<ExamSection, { correct: number; total: number }>();
+    const grouped = new Map<string, { correct: number; total: number }>();
     if (!result) return grouped;
-    for (const item of result.answers) {
-      const itemQuestion = mockQuestions.find((candidate) => candidate.id === item.questionId);
-      if (!itemQuestion) continue;
-      const section = getExamSection(itemQuestion);
-      const score = grouped.get(section) ?? { correct: 0, total: 0 };
-      score.total += 1;
-      if (item.correct) score.correct += 1;
-      grouped.set(section, score);
+    for (const section of paperTestSections) {
+      const ids = new Set<string>(section.questionIds);
+      const answers = result.answers.filter((answer) => ids.has(answer.questionId));
+      grouped.set(section.id, {
+        correct: answers.filter((answer) => answer.correct).length,
+        total: answers.length,
+      });
     }
     return grouped;
   }, [result]);
@@ -213,27 +428,6 @@ export function MockTest() {
   const allComplete =
     answeredCount === mockQuestions.length && openAnsweredCount === openMockTasks.length;
 
-  const question: StudyQuestion | undefined = started && draft.index < mockQuestions.length
-    ? mockQuestions[draft.index]
-    : undefined;
-
-  useEffect(() => {
-    if (!started || result || !question?.options) return;
-    function onKeyDown(event: KeyboardEvent) {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
-      if (!/^[1-4]$/.test(event.key)) return;
-      const option = question?.options?.[Number(event.key) - 1];
-      if (!option) return;
-      setDraft((current) => ({
-        ...current,
-        answers: { ...current.answers, [question.id]: option },
-      }));
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [question, result, started]);
-
   function updateAnswer(questionId: string, answer: string) {
     setDraft((current) => ({
       ...current,
@@ -241,17 +435,22 @@ export function MockTest() {
     }));
   }
 
+  function beginTest() {
+    setStarted(true);
+    window.setTimeout(() => window.scrollTo({ top: 0 }), 0);
+  }
+
   function submitMock() {
     if (!allComplete) return;
     const createdAt = new Date().toISOString();
-    const answers = mockQuestions.map((item) => {
-      const answer = draft.answers[item.id] ?? '';
-      const correct = isCorrectAnswer(item, answer);
-      recordAnswer(item, answer, 'mock');
-      return { questionId: item.id, answer, correct };
+    const answers = mockQuestions.map((question) => {
+      const answer = draft.answers[question.id] ?? '';
+      const correct = isCorrectAnswer(question, answer);
+      recordAnswer(question, answer, 'mock');
+      return { questionId: question.id, answer, correct };
     });
     const attempt: MockAttempt = {
-      id: `mock-${createdAt}`,
+      id: `paper-test-${createdAt}`,
       createdAt,
       score: answers.filter((answer) => answer.correct).length,
       maxScore: answers.length,
@@ -261,6 +460,7 @@ export function MockTest() {
     setResult(attempt);
     setResumed(false);
     window.localStorage.removeItem(DRAFT_KEY);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function resetTest() {
@@ -285,434 +485,322 @@ export function MockTest() {
   if (result) {
     const incorrect = result.answers.filter((answer) => !answer.correct);
     const scorePercent = Math.round((result.score / result.maxScore) * 100);
-    const openSectionScore = (section: 'writing' | 'speaking') => {
-      const tasks = openMockTasks.filter((task) => task.section === section);
-      return {
-        correct: tasks.reduce((sum, task) => sum + (rubricChecks[task.id]?.length ?? 0), 0),
-        total: tasks.reduce((sum, task) => sum + task.checklist.length, 0),
-        touched: tasks.some((task) => Object.hasOwn(rubricChecks, task.id)),
-      };
-    };
-    const writingScore = openSectionScore('writing');
-    const speakingScore = openSectionScore('speaking');
-    const sectionRows = (
-      [
-        ['listening', objectiveSectionScores.get('listening')],
-        ['reading', objectiveSectionScores.get('reading')],
-        ['writing', writingScore],
-        ['speaking', speakingScore],
-        ['language', objectiveSectionScores.get('language')],
-      ] as const
+    const openScore = openMockTasks.reduce(
+      (score, task) => ({
+        correct: score.correct + (rubricChecks[task.id]?.length ?? 0),
+        total: score.total + task.checklist.length,
+      }),
+      { correct: 0, total: 0 },
     );
+
     return (
       <StudyPageShell
-        eyebrow="Wynik próby"
-        title={`${result.score} / ${result.maxScore}`}
-        description="Feedback jest już widoczny, a każda pomyłka trafiła do obowiązkowej poprawy."
+        eyebrow="Wynik digital paper test"
+        title={`${result.score} / ${result.maxScore} pkt.`}
+        description={`Próg zaliczenia: 60%. ${draft.candidateName ? `Arkusz: ${draft.candidateName}.` : ''}`}
       >
-        <Callout
-          type={scorePercent >= 75 ? 'success' : 'warning'}
-          title={scorePercent >= 75 ? 'Dobry punkt wyjścia' : 'Najpierw popraw słabe lekcje'}
-          className="my-0 max-w-3xl"
-        >
-          Wynik z zadań zamkniętych: {scorePercent}%. Zadania otwarte oceń osobno według checklist poniżej.
-        </Callout>
-
-        <section className="mt-10 max-w-3xl" aria-labelledby="skill-result-heading">
-          <h2 id="skill-result-heading" className="text-lg font-semibold">Wynik według sprawności</h2>
-          <p className="mt-2 text-sm leading-6 text-fd-muted-foreground">
-            Pisanie i mówienie uzupełnią się, gdy zaznaczysz kryteria samooceny pod odpowiedziami.
-          </p>
-          <div className="mt-4 divide-y divide-fd-border border-y border-fd-border">
-            {sectionRows.map(([section, score]) => {
-              const isOpen = section === 'writing' || section === 'speaking';
-              const ready = score && (!isOpen || score.touched);
-              const percent = ready && score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
-              return (
-                <div key={section} className="grid items-center gap-3 py-4 sm:grid-cols-[11rem_1fr_auto]">
-                  <span className="text-sm font-medium">{sectionLabels[section]}</span>
-                  <div
-                    className="h-1.5 overflow-hidden rounded-full bg-fd-muted"
-                    role="progressbar"
-                    aria-label={`Wynik: ${sectionLabels[section]}`}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={percent}
-                  >
-                    <div className="h-full bg-fd-primary transition-[width]" style={{ width: `${percent}%` }} />
-                  </div>
-                  <span className="min-w-20 text-right text-sm text-fd-muted-foreground">
-                    {ready ? `${score.correct}/${score.total}` : 'oceń niżej'}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="mt-10 max-w-3xl" aria-labelledby="lesson-result-heading">
-          <h2 id="lesson-result-heading" className="text-lg font-semibold">Wynik według lekcji</h2>
-          <div className="mt-4 divide-y divide-fd-border border-y border-fd-border">
-            {lessonScores.map((score) => {
-              const percent = Math.round((score.correct / score.total) * 100);
-              return (
-                <div key={score.lesson} className="grid items-center gap-3 py-4 sm:grid-cols-[7rem_1fr_auto]">
-                  <span className="text-sm font-medium">Lektion {score.lesson}</span>
-                  <div
-                    className="h-1.5 overflow-hidden rounded-full bg-fd-muted"
-                    role="progressbar"
-                    aria-label={`Wynik Lektion ${score.lesson}`}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={percent}
-                  >
-                    <div className="h-full bg-fd-primary" style={{ width: `${percent}%` }} />
-                  </div>
-                  <span className="text-sm text-fd-muted-foreground">{score.correct}/{score.total}</span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <div className="mt-8 flex flex-wrap gap-3 border-y border-fd-border py-6">
-          <Link href="/mistakes" className="rounded-md bg-fd-primary px-4 py-2.5 text-sm font-medium text-fd-primary-foreground">
-            {incorrect.length > 0 ? `Ćwicz błędy (${incorrect.length})` : 'Historia błędów'}
-          </Link>
-          <button
-            type="button"
-            onClick={resetTest}
-            className="rounded-md border border-fd-border px-4 py-2.5 text-sm font-medium hover:bg-fd-muted"
+        <div className="max-w-4xl">
+          <Callout
+            type={scorePercent >= 60 ? 'success' : 'warning'}
+            title={scorePercent >= 60 ? 'Próg zaliczenia osiągnięty' : 'Wróć do zaznaczonych obszarów'}
+            className="my-0"
           >
-            Nowa próba
-          </button>
-        </div>
+            Zadania automatyczne: {scorePercent}%. Pisanie i mówienie oceń według 24 jawnych kryteriów poniżej.
+          </Callout>
 
-        <section className="mt-10 max-w-3xl" aria-labelledby="closed-feedback-heading">
-          <h2 id="closed-feedback-heading" className="text-lg font-semibold">Odpowiedzi do poprawy</h2>
-          {incorrect.length ? (
-            <Accordions className="mt-4">
-              {incorrect.map((item) => {
-                const itemQuestion = mockQuestions.find((candidate) => candidate.id === item.questionId);
-                if (!itemQuestion) return null;
-                const number = mockQuestions.findIndex((candidate) => candidate.id === item.questionId) + 1;
+          <section className="mt-9" aria-labelledby="paper-result-heading">
+            <div className="flex items-end justify-between gap-5 border-b-2 border-fd-foreground pb-3">
+              <div>
+                <p className="text-xs font-bold tracking-[0.15em] text-fd-muted-foreground uppercase">Auswertung</p>
+                <h2 id="paper-result-heading" className="mt-1 text-xl font-bold">Wynik według bloków arkusza</h2>
+              </div>
+              <div className={styles.resultStamp}>{result.score}/{result.maxScore}</div>
+            </div>
+            <div className="divide-y divide-fd-border">
+              {paperTestSections.map((section) => {
+                const score = objectiveSectionScores.get(section.id) ?? { correct: 0, total: section.questionIds.length };
+                const percent = score.total ? Math.round((score.correct / score.total) * 100) : 0;
                 return (
-                  <Accordion
-                    key={item.questionId}
-                    value={`result-${item.questionId}`}
-                    title={`Zadanie ${number} · Lektion ${itemQuestion.lesson} · ${itemQuestion.topic}`}
-                  >
-                    <div className="space-y-4 text-sm">
-                      <p className="font-medium leading-6">{itemQuestion.prompt}</p>
-                      <dl className="grid gap-3 sm:grid-cols-2">
-                        <div><dt className="text-xs text-fd-muted-foreground">Twoja odpowiedź</dt><dd className="mt-1">{item.answer || '—'}</dd></div>
-                        <div><dt className="text-xs text-fd-muted-foreground">Poprawnie</dt><dd className="mt-1 font-medium">{itemQuestion.correctAnswer}</dd></div>
-                      </dl>
-                      <p className="leading-6 text-fd-muted-foreground">{itemQuestion.explanation}</p>
+                  <div key={section.id} className="grid items-center gap-3 py-4 sm:grid-cols-[12rem_1fr_auto]">
+                    <span className="text-sm font-semibold">{section.title}</span>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-fd-muted" role="progressbar" aria-label={section.title} aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
+                      <div className="h-full bg-fd-primary" style={{ width: `${percent}%` }} />
                     </div>
-                  </Accordion>
+                    <span className="min-w-14 text-right text-sm text-fd-muted-foreground">{score.correct}/{score.total}</span>
+                  </div>
                 );
               })}
-            </Accordions>
-          ) : (
-            <p className="mt-4 flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
-              <Check className="size-4" aria-hidden="true" /> Wszystkie zadania zamknięte są poprawne.
-            </p>
-          )}
-        </section>
+            </div>
+          </section>
 
-        <section className="mt-10 max-w-3xl" aria-labelledby="open-feedback-heading">
-          <h2 id="open-feedback-heading" className="text-lg font-semibold">Samoocena pisania i mówienia</h2>
-          <p className="mt-2 text-sm leading-6 text-fd-muted-foreground">
-            Porównaj odpowiedź z kryteriami. Zaznacz tylko to, co rzeczywiście pojawiło się w Twojej wypowiedzi.
-          </p>
-          <Accordions className="mt-4">
-            {openMockTasks.map((task) => (
-              <Accordion key={task.id} value={`open-${task.id}`} title={task.label}>
-                <div className="space-y-4 text-sm">
-                  <div>
-                    <p className="text-xs text-fd-muted-foreground">Twoja odpowiedź</p>
-                    <p className="mt-1 whitespace-pre-wrap leading-6">
-                      {draft.openAnswers[task.id]
-                        || (task.section === 'speaking' && draft.completedOpen[task.id]
-                          ? 'Wypowiedź wykonana ustnie — bez zapisanej transkrypcji.'
-                          : 'Brak odpowiedzi.')}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium">Zaznacz spełnione kryteria:</p>
-                    <div className="mt-2 grid gap-2">
-                      {task.checklist.map((item, criterionIndex) => (
-                        <label key={item} className="flex cursor-pointer items-start gap-2 rounded-md border border-fd-border p-3 leading-5 hover:bg-fd-muted/50">
-                          <input
-                            type="checkbox"
-                            checked={(rubricChecks[task.id] ?? []).includes(criterionIndex)}
-                            onChange={() => toggleRubric(task.id, criterionIndex)}
-                            className="mt-0.5 size-4 accent-[var(--color-fd-primary)]"
-                          />
-                          <span>{item}</span>
+          <div className="mt-7 flex flex-wrap gap-3 border-y border-fd-border py-5">
+            <Link href="/mistakes" className="rounded-md bg-fd-primary px-4 py-2.5 text-sm font-medium text-fd-primary-foreground">
+              {incorrect.length ? `Ćwicz błędy (${incorrect.length})` : 'Historia błędów'}
+            </Link>
+            <button type="button" onClick={resetTest} className="inline-flex items-center gap-2 rounded-md border border-fd-border px-4 py-2.5 text-sm font-medium hover:bg-fd-muted">
+              <RotateCcw className="size-4" aria-hidden="true" /> Nowy arkusz
+            </button>
+          </div>
+
+          <section className="mt-10" aria-labelledby="closed-feedback-heading">
+            <h2 id="closed-feedback-heading" className="text-xl font-semibold">Odpowiedzi do poprawy</h2>
+            {incorrect.length ? (
+              <Accordions className="mt-4">
+                {incorrect.map((item) => {
+                  const question = questionById.get(item.questionId);
+                  if (!question) return null;
+                  const number = mockQuestions.findIndex((candidate) => candidate.id === item.questionId) + 1;
+                  return (
+                    <Accordion key={item.questionId} value={`result-${item.questionId}`} title={`Zadanie ${number} · Lektion ${question.lesson} · ${question.topic}`}>
+                      <div className="space-y-4 text-sm">
+                        <p className="font-medium leading-6">{question.prompt}</p>
+                        <dl className="grid gap-3 sm:grid-cols-2">
+                          <div><dt className="text-xs text-fd-muted-foreground">Twoja odpowiedź</dt><dd className="mt-1">{item.answer || '—'}</dd></div>
+                          <div><dt className="text-xs text-fd-muted-foreground">Poprawnie</dt><dd className="mt-1 font-medium">{question.correctAnswer}</dd></div>
+                        </dl>
+                        <p className="leading-6 text-fd-muted-foreground">{question.explanation}</p>
+                      </div>
+                    </Accordion>
+                  );
+                })}
+              </Accordions>
+            ) : (
+              <p className="mt-4 flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
+                <Check className="size-4" aria-hidden="true" /> Wszystkie 50 odpowiedzi są poprawne.
+              </p>
+            )}
+          </section>
+
+          <section className="mt-10" aria-labelledby="open-feedback-heading">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 id="open-feedback-heading" className="text-xl font-semibold">Samoocena pisania i mówienia</h2>
+                <p className="mt-2 text-sm text-fd-muted-foreground">Zaznacz tylko kryteria naprawdę widoczne lub słyszalne w odpowiedzi.</p>
+              </div>
+              <span className="text-sm font-semibold">{openScore.correct}/{openScore.total} kryteriów</span>
+            </div>
+            <div className="mt-5 space-y-6">
+              {openMockTasks.map((task) => (
+                <article key={task.id} className="border-t border-fd-border pt-5">
+                  <h3 className="font-semibold">{task.label}</h3>
+                  {task.section === 'writing' ? (
+                    <blockquote className="mt-3 border-l-2 border-fd-border pl-4 text-sm leading-6 whitespace-pre-wrap">{draft.openAnswers[task.id]}</blockquote>
+                  ) : null}
+                  <div className="mt-4 grid gap-2">
+                    {task.checklist.map((criterion, criterionIndex) => {
+                      const checked = (rubricChecks[task.id] ?? []).includes(criterionIndex);
+                      return (
+                        <label key={criterion} className="flex min-h-10 cursor-pointer items-start gap-3 rounded-md border border-fd-border px-3 py-2 text-sm hover:bg-fd-muted/50">
+                          <input type="checkbox" checked={checked} onChange={() => toggleRubric(task.id, criterionIndex)} className="mt-0.5 size-4 accent-fd-primary" />
+                          <span>{criterion}</span>
                         </label>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
-                  <div>
-                    <p className="text-xs text-fd-muted-foreground">Model odpowiedzi</p>
-                    <p className="mt-1 leading-6">{task.model}</p>
-                  </div>
-                </div>
-              </Accordion>
-            ))}
-          </Accordions>
-        </section>
+                  <details className="mt-4 text-sm">
+                    <summary className="cursor-pointer font-medium">Pokaż model odpowiedzi</summary>
+                    <p className="mt-3 border-l-2 border-fd-primary/40 pl-4 leading-6 text-fd-muted-foreground">{task.model}</p>
+                  </details>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
       </StudyPageShell>
     );
   }
 
   if (!started) {
-    const lastAttempt = state.mockAttempts[0];
     return (
       <StudyPageShell
-        title="Próba generalna"
+        eyebrow="Testy · Lektion 13–18"
+        title="Digital paper test"
+        description="Pełny arkusz wzorowany na układzie i typach zadań z Twoich testów."
       >
-        <section className="max-w-2xl">
-          <dl className="grid grid-cols-3 gap-5 border-y border-fd-border py-6 text-sm">
-            <div><dt className="text-fd-muted-foreground">Zadania</dt><dd className="mt-1 text-lg font-semibold">20 + 6</dd></div>
-            <div><dt className="text-fd-muted-foreground">Czas</dt><dd className="mt-1 text-lg font-semibold">~55 min</dd></div>
-            <div><dt className="text-fd-muted-foreground">Zakres</dt><dd className="mt-1 text-lg font-semibold">13–18</dd></div>
-          </dl>
-
-          <Callout type="info" title="Zasady próby" className="mt-6">
-            <ul className="space-y-1">
-              <li>Feedback pojawia się dopiero po oddaniu.</li>
-              <li>Możesz pomijać zadania i wracać do nich z nawigacji.</li>
-              <li>Każda zmiana zapisuje się lokalnie w tej przeglądarce.</li>
-              <li>Do oddania trzeba uzupełnić 20 zadań oraz 6 zadań pisemnych i ustnych.</li>
-              <li>W mówieniu możesz nagrać odpowiedź albo wykonać ją na głos i zaznaczyć jako gotową.</li>
-            </ul>
-          </Callout>
-
-          {lastAttempt ? (
-            <div className="mt-6 border-l-2 border-fd-border pl-4 text-sm">
-              <p className="font-medium">Ostatni wynik: {lastAttempt.score}/{lastAttempt.maxScore}</p>
-              <p className="mt-1 text-xs text-fd-muted-foreground">{formatDate(lastAttempt.createdAt)}</p>
+        <div className="max-w-4xl">
+          <div className={styles.previewSheet}>
+            <div className="flex flex-wrap items-start justify-between gap-5 border-b-2 border-neutral-900 pb-5">
+              <div className="flex items-center gap-4">
+                <div className={styles.previewMark}>DE<br />A1.2</div>
+                <div>
+                  <p className="text-xs font-bold tracking-[0.18em] text-neutral-500 uppercase">Kapitel 13–18</p>
+                  <h2 className="mt-1 text-2xl font-black tracking-tight">PRÜFUNGSTRAINING</h2>
+                </div>
+              </div>
+              <div className="text-right text-sm">
+                <p className="font-bold">Max. 50 P. + Selbstbewertung</p>
+                <p className="mt-1 text-neutral-500">Bestehensgrenze: 60%</p>
+              </div>
             </div>
-          ) : null}
 
-          <button
-            type="button"
-            disabled={!hydrated}
-            onClick={() => setStarted(true)}
-            className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-md bg-fd-primary px-4 text-sm font-medium text-fd-primary-foreground disabled:opacity-45"
-          >
-            <ClipboardCheck className="size-4" aria-hidden="true" /> Rozpocznij próbę
-          </button>
-        </section>
+            <dl className="mt-6 grid border-y border-neutral-300 sm:grid-cols-3 sm:divide-x sm:divide-neutral-300">
+              <div className="px-4 py-4"><dt className="text-xs font-bold tracking-wide text-neutral-500 uppercase">Aufgaben</dt><dd className="mt-1 text-xl font-bold">50 + 6</dd></div>
+              <div className="border-t border-neutral-300 px-4 py-4 sm:border-t-0"><dt className="text-xs font-bold tracking-wide text-neutral-500 uppercase">Zeit</dt><dd className="mt-1 text-xl font-bold">~70 Min.</dd></div>
+              <div className="border-t border-neutral-300 px-4 py-4 sm:border-t-0"><dt className="text-xs font-bold tracking-wide text-neutral-500 uppercase">Umfang</dt><dd className="mt-1 text-xl font-bold">L13–18</dd></div>
+            </dl>
+
+            <div className="mt-7 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+              {paperTestSections.map((section) => (
+                <div key={section.id} className="flex items-start justify-between gap-4 border-b border-neutral-300 pb-3">
+                  <div>
+                    <p className="font-bold">{section.title}</p>
+                    <p className="mt-1 text-xs leading-5 text-neutral-500">
+                      {section.layout === 'matching' ? 'tabela dopasowań A–L' : null}
+                      {section.layout === 'cloze' ? 'tekst z bankiem wyrazów' : null}
+                      {section.layout === 'listening' ? 'nagrania i wybór informacji' : null}
+                      {section.layout === 'reading' ? 'Richtig/Falsch i wybór odpowiedzi' : null}
+                      {section.layout === 'gaps' ? 'luki bezpośrednio w zdaniach' : null}
+                      {section.layout === 'sentences' ? 'budowanie i poprawianie zdań' : null}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-sm font-bold">{section.questionIds.length} P.</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-7 border border-neutral-300 bg-neutral-100 p-4">
+              <p className="text-xs font-bold tracking-[0.12em] uppercase">Zasady arkusza</p>
+              <ul className="mt-3 grid gap-2 text-sm leading-6 sm:grid-cols-2 sm:gap-x-8">
+                <li>• odpowiedzi zapisują się automatycznie</li>
+                <li>• brak feedbacku przed oddaniem</li>
+                <li>• słuchanie obejmuje każdą lekcję</li>
+                <li>• pisanie i mówienie mają jawne kryteria</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center gap-4">
+            <button
+              type="button"
+              disabled={!hydrated}
+              onClick={beginTest}
+              className="inline-flex min-h-12 items-center gap-2 rounded-md bg-fd-primary px-5 text-sm font-medium text-fd-primary-foreground disabled:opacity-45"
+            >
+              <ClipboardCheck className="size-4" aria-hidden="true" /> Rozpocznij arkusz
+            </button>
+            <Link href="/study" className="inline-flex min-h-12 items-center gap-2 px-2 text-sm font-medium text-fd-muted-foreground hover:text-fd-foreground">
+              <ArrowLeft className="size-4" aria-hidden="true" /> Wróć do planu
+            </Link>
+          </div>
+        </div>
       </StudyPageShell>
     );
   }
 
-  const onOpenTasks = draft.index >= mockQuestions.length;
-  const currentAnswer = question ? draft.answers[question.id] ?? '' : '';
-  const missingObjective = mockQuestions.length - answeredCount;
+  const missingClosed = mockQuestions.length - answeredCount;
   const missingOpen = openMockTasks.length - openAnsweredCount;
+  const today = formatDate(new Date().toISOString());
 
   return (
     <StudyPageShell
-      eyebrow="Próba w toku · bez feedbacku"
-      title={onOpenTasks ? 'Pisanie i mówienie' : `Zadanie ${draft.index + 1} z ${mockQuestions.length}`}
-      description={onOpenTasks ? 'Odpowiedz krótko, ale uwzględnij każdy punkt polecenia.' : undefined}
+      className={styles.testShell}
+      eyebrow="Test w toku"
+      title="Digital paper test"
+      description={resumed ? 'Przywrócono automatycznie zapisany arkusz.' : 'Wpisuj odpowiedzi bezpośrednio w cyfrową kartę.'}
     >
-      {resumed ? (
-        <Callout type="success" title="Wznowiono zapisany szkic" className="mt-0 max-w-3xl">
-          Możesz kontynuować dokładnie od miejsca, w którym przerwano próbę.
-        </Callout>
-      ) : null}
-
-      <section className="mt-6 max-w-3xl border-y border-fd-border py-5" aria-label="Postęp i nawigacja próby">
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-fd-muted-foreground">
-          <span>{answeredCount} z {mockQuestions.length} zadań zamkniętych</span>
-          <span className="flex items-center gap-1.5"><Save className="size-3.5" aria-hidden="true" /> zapis lokalny</span>
-        </div>
-        <div
-          className="mt-3 h-1.5 overflow-hidden rounded-full bg-fd-muted"
-          role="progressbar"
-          aria-label="Uzupełnione zadania próby"
-          aria-valuemin={0}
-          aria-valuemax={mockQuestions.length}
-          aria-valuenow={answeredCount}
-        >
-          <div className="h-full bg-fd-primary transition-[width]" style={{ width: `${(answeredCount / mockQuestions.length) * 100}%` }} />
-        </div>
-        <div className="mt-5 grid grid-cols-5 gap-2 sm:grid-cols-10">
-          {mockQuestions.map((item, itemIndex) => {
-            const answered = (draft.answers[item.id] ?? '').trim().length > 0;
-            const current = draft.index === itemIndex;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                aria-label={`Zadanie ${itemIndex + 1}: ${answered ? 'odpowiedziano' : 'bez odpowiedzi'}`}
-                aria-current={current ? 'step' : undefined}
-                onClick={() => setDraft((value) => ({ ...value, index: itemIndex }))}
-                className={cn(
-                  'grid min-h-9 place-items-center rounded-md border border-fd-border text-xs font-medium hover:bg-fd-muted',
-                  answered && 'bg-fd-muted text-fd-foreground',
-                  current && 'border-fd-primary bg-fd-primary text-fd-primary-foreground hover:bg-fd-primary',
-                )}
-              >
-                {itemIndex + 1}
-              </button>
-            );
-          })}
-        </div>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            aria-current={onOpenTasks ? 'step' : undefined}
-            onClick={() => setDraft((value) => ({ ...value, index: mockQuestions.length }))}
-            className="min-h-9 rounded-md border border-fd-border px-3 text-xs font-medium hover:bg-fd-muted aria-[current=step]:border-fd-primary aria-[current=step]:bg-fd-primary aria-[current=step]:text-fd-primary-foreground"
-          >
-            Pisanie i mówienie · {openAnsweredCount}/{openMockTasks.length}
-          </button>
-          <Link href="/study" className="text-xs font-medium text-fd-muted-foreground hover:text-fd-foreground">
-            Dokończ później
-          </Link>
-        </div>
-      </section>
-
-      {question ? (
-        <section className="mt-9 max-w-2xl" aria-labelledby="mock-question-heading">
-          <p className="text-xs text-fd-muted-foreground">Lektion {question.lesson} · {skillLabels[question.skill]}</p>
-          {question.audioText ? <div className="mt-5"><AudioPrompt text={question.audioText} /></div> : null}
-          {question.instruction ? <p className="mt-4 text-sm text-fd-muted-foreground">{question.instruction}</p> : null}
-          <h2 id="mock-question-heading" className="mt-3 whitespace-pre-line text-xl font-semibold leading-8">{question.prompt}</h2>
-          {question.tokens ? <p className="mt-3 text-sm text-fd-muted-foreground">{question.tokens.join(' / ')}</p> : null}
-          <div className="mt-7">
-            {question.options ? (
-              <div className="grid gap-2" role="radiogroup" aria-label="Wybierz odpowiedź">
-                {question.options.map((option, optionIndex) => (
-                  <button
-                    key={option}
-                    type="button"
-                    role="radio"
-                    aria-checked={currentAnswer === option}
-                    onClick={() => updateAnswer(question.id, option)}
-                    className={cn(
-                      'flex min-h-12 items-center gap-3 rounded-md border border-fd-border px-4 text-left text-sm hover:bg-fd-muted',
-                      currentAnswer === option && 'border-fd-primary bg-fd-primary/8',
-                    )}
-                  >
-                    <span className="grid size-6 shrink-0 place-items-center rounded border border-fd-border text-xs text-fd-muted-foreground">
-                      {optionIndex + 1}
-                    </span>
-                    {option}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <input
-                value={currentAnswer}
-                onChange={(event) => updateAnswer(question.id, event.target.value)}
-                autoComplete="off"
-                className="min-h-12 w-full rounded-md border border-fd-border bg-fd-background px-4 text-sm outline-none focus:border-fd-primary"
-                placeholder="Wpisz odpowiedź…"
-              />
-            )}
-          </div>
-          {!currentAnswer.trim() ? (
-            <p className="mt-3 text-xs text-fd-muted-foreground">Możesz pominąć to zadanie i wrócić do niego później.</p>
-          ) : null}
-        </section>
-      ) : (
-        <section className="mt-9 max-w-2xl space-y-10">
-          {openMockTasks.map((task) => (
-            <div key={task.id} className="border-b border-fd-border pb-10 last:border-b-0">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-base font-semibold">{task.label}</h2>
-                <span className="rounded-md border border-fd-border px-2 py-1 text-[11px] font-medium text-fd-muted-foreground">
-                  {task.section === 'writing' ? 'odpowiedź pisemna' : 'wypowiedź ustna'}
-                </span>
-              </div>
-              <p className="mt-3 text-sm leading-6 text-fd-muted-foreground">{task.prompt}</p>
-              <OpenTaskVisual task={task} />
-              {task.section === 'speaking' ? <VoiceRecorder /> : null}
-              <label htmlFor={task.id} className="mt-5 block text-xs font-medium text-fd-muted-foreground">
-                {task.section === 'writing' ? 'Twoja odpowiedź' : 'Opcjonalne notatki lub transkrypcja'}
-              </label>
-              <textarea
-                id={task.id}
-                rows={task.section === 'writing' ? 7 : 3}
-                value={draft.openAnswers[task.id] ?? ''}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    openAnswers: { ...current.openAnswers, [task.id]: event.target.value },
-                  }))
-                }
-                className="mt-2 w-full rounded-md border border-fd-border bg-fd-background p-4 text-sm leading-6 outline-none focus:border-fd-primary"
-                placeholder={task.section === 'writing' ? 'Zapisz pełną odpowiedź…' : 'Możesz zanotować najważniejsze zdania…'}
-              />
-              {task.section === 'speaking' ? (
-                <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-fd-border p-4 text-sm hover:bg-fd-muted/40">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(draft.completedOpen[task.id])}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...current,
-                        completedOpen: { ...current.completedOpen, [task.id]: event.target.checked },
-                      }))
-                    }
-                    className="mt-0.5 size-4 accent-[var(--color-fd-primary)]"
-                  />
-                  <span>
-                    <strong className="font-medium">Wypowiedź wykonana.</strong>{' '}
-                    <span className="text-fd-muted-foreground">Zaznacz po nagraniu albo odpowiedzi na głos.</span>
-                  </span>
-                </label>
-              ) : null}
-            </div>
-          ))}
-        </section>
-      )}
-
-      <div className="mt-10 max-w-3xl border-t border-fd-border pt-6">
-        {onOpenTasks && !allComplete ? (
-          <p className="mb-4 text-sm text-fd-muted-foreground" role="status">
-            Do oddania brakuje: {missingObjective} {missingObjective === 1 ? 'zadania zamkniętego' : 'zadań zamkniętych'}
-            {missingObjective > 0 && missingOpen > 0 ? ' oraz ' : ''}
-            {missingOpen > 0 ? `${missingOpen} ${missingOpen === 1 ? 'odpowiedzi otwartej' : 'odpowiedzi otwartych'}` : ''}.
+      <div className={styles.examToolbar}>
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 truncate text-xs font-medium text-fd-muted-foreground">
+            <Save className="size-3.5" aria-hidden="true" /> Zapis lokalny aktywny
           </p>
-        ) : null}
-        <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            disabled={draft.index === 0}
-            onClick={() => setDraft((current) => ({ ...current, index: Math.max(0, current.index - 1) }))}
-            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-fd-border px-4 text-sm font-medium hover:bg-fd-muted disabled:opacity-35"
-          >
-            <ArrowLeft className="size-4" aria-hidden="true" /> Wstecz
-          </button>
-          {onOpenTasks ? (
-            <button
-              type="button"
-              disabled={!allComplete}
-              onClick={submitMock}
-              className="min-h-11 rounded-md bg-fd-primary px-4 text-sm font-medium text-fd-primary-foreground disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              Oddaj próbę
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setDraft((current) => ({ ...current, index: current.index + 1 }))}
-              className="inline-flex min-h-11 items-center gap-2 rounded-md bg-fd-primary px-4 text-sm font-medium text-fd-primary-foreground"
-            >
-              {draft.index === mockQuestions.length - 1 ? 'Część otwarta' : 'Dalej'}
-              <ArrowRight className="size-4" aria-hidden="true" />
-            </button>
-          )}
+          <p className="mt-1 text-sm font-semibold">
+            <span className="hidden sm:inline">{answeredCount}/{mockQuestions.length} odpowiedzi · {openAnsweredCount}/{openMockTasks.length} zadań otwartych</span>
+            <span className="sm:hidden">{answeredCount}/{mockQuestions.length} · otwarte {openAnsweredCount}/{openMockTasks.length}</span>
+          </p>
         </div>
+        <div className="flex shrink-0 gap-2">
+          <button type="button" onClick={resetTest} className="min-h-10 rounded-md border border-fd-border px-3 text-sm font-medium hover:bg-fd-muted">Przerwij</button>
+          <button type="button" onClick={submitMock} disabled={!allComplete} className="inline-flex min-h-10 items-center gap-2 rounded-md bg-fd-primary px-4 text-sm font-medium text-fd-primary-foreground disabled:cursor-not-allowed disabled:opacity-45">
+            <ClipboardCheck className="size-4" aria-hidden="true" /> Oddaj
+          </button>
+        </div>
+      </div>
+
+      <nav className={styles.sectionNav} aria-label="Sekcje arkusza">
+        {paperTestSections.map((section) => {
+          const done = section.questionIds.filter((id) => (draft.answers[id] ?? '').trim()).length;
+          return <a key={section.id} href={`#${section.id}`}>{sectionNavLabel(section.title)} <span>{done}/{section.questionIds.length}</span></a>;
+        })}
+        <a href="#schreiben">SCHREIBEN</a>
+        <a href="#sprechen">SPRECHEN</a>
+      </nav>
+
+      <div className={styles.paper}>
+        <header className={styles.paperHeader}>
+          <div className={styles.paperMark}>DE<br />A1.2</div>
+          <div className={styles.nameField}>
+            <label htmlFor="candidate-name">Vorname, NAME:</label>
+            <input id="candidate-name" value={draft.candidateName} onChange={(event) => setDraft((current) => ({ ...current, candidateName: event.target.value }))} autoComplete="name" />
+          </div>
+          <div className={styles.paperMeta}>
+            <span>{today}</span>
+            <strong>Kap. 13–18</strong>
+          </div>
+          <div className={styles.paperTitle}>
+            <p>DEUTSCH · PRÜFUNGSTRAINING</p>
+            <span>Punkte: ____ / 50 &nbsp; (60%)</span>
+          </div>
+        </header>
+
+        {paperTestSections.map((section) => (
+          <ObjectivePaperSection key={section.id} section={section} draft={draft} updateAnswer={updateAnswer} />
+        ))}
+
+        <section id="schreiben" className={styles.paperSection}>
+          <header className={styles.sectionHeader}>
+            <div className="flex items-baseline justify-between gap-4"><h2>SCHREIBEN</h2><span>2 Aufgaben</span></div>
+            <p>Schreiben Sie beide Texte. Antworten Sie auf jeden Inhaltspunkt.</p>
+          </header>
+          <div className="mt-5 space-y-10">
+            {openMockTasks.filter((task) => task.section === 'writing').map((task, index) => (
+              <article key={task.id} className={styles.openTask}>
+                <div className="flex gap-3"><span className={styles.questionNumber}>{index + 1}</span><div><h3 className="font-bold">{task.label.replace('Pisanie · ', '')}</h3><p className="mt-2 text-sm leading-6">{task.prompt}</p></div></div>
+                <OpenTaskVisual task={task} />
+                <label className="mt-5 block">
+                  <span className="sr-only">Odpowiedź: {task.label}</span>
+                  <textarea value={draft.openAnswers[task.id] ?? ''} onChange={(event) => setDraft((current) => ({ ...current, openAnswers: { ...current.openAnswers, [task.id]: event.target.value } }))} rows={9} className={styles.paperTextarea} placeholder="Schreiben Sie hier…" />
+                </label>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="sprechen" className={styles.paperSection}>
+          <header className={styles.sectionHeader}>
+            <div className="flex items-baseline justify-between gap-4"><h2>SPRECHEN</h2><span>4 Aufgaben</span></div>
+            <p>Sprechen Sie frei. Nehmen Sie Ihre Antwort auf oder markieren Sie die Aufgabe nach der mündlichen Antwort.</p>
+          </header>
+          <div className="mt-5 space-y-10">
+            {openMockTasks.filter((task) => task.section === 'speaking').map((task, index) => {
+              const complete = Boolean(draft.completedOpen[task.id]);
+              return (
+                <article key={task.id} className={styles.openTask}>
+                  <div className="flex gap-3"><span className={styles.questionNumber}>{index + 1}</span><div><h3 className="font-bold">{task.label.replace('Mówienie · ', '')}</h3><p className="mt-2 text-sm leading-6">{task.prompt}</p></div></div>
+                  <OpenTaskVisual task={task} />
+                  <VoiceRecorder />
+                  <button type="button" aria-pressed={complete} onClick={() => setDraft((current) => ({ ...current, completedOpen: { ...current.completedOpen, [task.id]: !complete } }))} className={cn(styles.completeButton, complete && styles.completeButtonActive)}>
+                    {complete ? <Check className="size-4" aria-hidden="true" /> : <FileText className="size-4" aria-hidden="true" />}
+                    {complete ? 'Aufgabe gemacht' : 'Odpowiedziałem/am na głos'}
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        <footer className={styles.paperFooter}>
+          <span>Digital Paper Test · Momente A1.2</span>
+          <span>Kapitel 13–18</span>
+        </footer>
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-y border-fd-border py-5">
+        <p className="text-sm text-fd-muted-foreground">
+          {allComplete ? 'Arkusz jest kompletny i gotowy do oddania.' : `Pozostało: ${missingClosed} odpowiedzi i ${missingOpen} zadań otwartych.`}
+        </p>
+        <button type="button" onClick={submitMock} disabled={!allComplete} className="inline-flex min-h-11 items-center gap-2 rounded-md bg-fd-primary px-5 text-sm font-medium text-fd-primary-foreground disabled:cursor-not-allowed disabled:opacity-45">
+          <ClipboardCheck className="size-4" aria-hidden="true" /> Oddaj cały arkusz
+        </button>
       </div>
     </StudyPageShell>
   );

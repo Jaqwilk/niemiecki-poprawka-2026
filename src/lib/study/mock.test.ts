@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { mockQuestions, openMockTasks } from './mock';
+import { mockQuestions, openMockTasks, paperTestSections } from './mock';
 
 describe('exam skill coverage', () => {
-  it('keeps a complete 20-question closed section', () => {
-    expect(mockQuestions).toHaveLength(20);
-    expect(mockQuestions.filter((question) => question.skill === 'listening').length).toBeGreaterThanOrEqual(4);
-    expect(mockQuestions.filter((question) => question.skill === 'reading').length).toBeGreaterThanOrEqual(6);
+  it('keeps a complete 50-point paper-style closed section', () => {
+    expect(mockQuestions).toHaveLength(50);
+    expect(mockQuestions.filter((question) => question.skill === 'listening')).toHaveLength(6);
+    expect(mockQuestions.filter((question) => question.skill === 'reading')).toHaveLength(16);
+    expect(mockQuestions.filter((question) => question.skill === 'vocabulary')).toHaveLength(12);
+  });
+
+  it('covers every lesson and every photographed paper layout', () => {
+    expect(new Set(mockQuestions.map((question) => question.lesson))).toEqual(
+      new Set([13, 14, 15, 16, 17, 18]),
+    );
+    expect(new Set(paperTestSections.map((section) => section.layout))).toEqual(
+      new Set(['listening', 'cloze', 'reading', 'matching', 'gaps', 'sentences']),
+    );
   });
 
   it('includes both writing formats and four distinct speaking situations', () => {

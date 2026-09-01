@@ -1,0 +1,479 @@
+.testShell {
+  max-width: 76rem;
+}
+
+.previewSheet,
+.paper {
+  color: #171717;
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.012), rgba(0, 0, 0, 0.012)),
+    #fffef9;
+  border: 1px solid #d4d4d4;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.11);
+  color-scheme: light;
+}
+
+.previewSheet {
+  padding: clamp(1.25rem, 4vw, 3rem);
+}
+
+.previewMark,
+.paperMark {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  background: #171717;
+  color: white;
+  font-weight: 900;
+  line-height: 0.82;
+  letter-spacing: -0.06em;
+}
+
+.previewMark {
+  width: 3.25rem;
+  height: 3.25rem;
+  font-size: 0.82rem;
+}
+
+.examToolbar {
+  position: sticky;
+  z-index: 25;
+  top: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 72rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--color-fd-border);
+  border-radius: 0.75rem;
+  background: color-mix(in oklab, var(--color-fd-background) 94%, transparent);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.sectionNav {
+  position: sticky;
+  z-index: 24;
+  top: 5.4rem;
+  display: flex;
+  max-width: 72rem;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+  padding: 0.35rem 0;
+  overflow-x: auto;
+  background: color-mix(in oklab, var(--color-fd-background) 94%, transparent);
+  backdrop-filter: blur(14px);
+  scrollbar-width: thin;
+}
+
+.sectionNav a {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--color-fd-border);
+  border-radius: 999px;
+  color: var(--color-fd-muted-foreground);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.sectionNav a:hover {
+  background: var(--color-fd-muted);
+  color: var(--color-fd-foreground);
+}
+
+.sectionNav span {
+  font-variant-numeric: tabular-nums;
+}
+
+.paper {
+  width: min(100%, 72rem);
+  margin-top: 1rem;
+  padding: clamp(1.15rem, 4vw, 3.5rem);
+}
+
+.paperHeader {
+  display: grid;
+  grid-template-columns: auto minmax(12rem, 1fr) auto;
+  align-items: center;
+  gap: 1rem 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 2px solid #171717;
+}
+
+.paperMark {
+  width: 3.5rem;
+  height: 3.5rem;
+  font-size: 0.86rem;
+}
+
+.nameField {
+  display: flex;
+  align-items: end;
+  gap: 0.5rem;
+  min-width: 0;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.nameField label {
+  flex: 0 0 auto;
+}
+
+.nameField input {
+  min-width: 0;
+  width: 100%;
+  padding: 0.2rem 0.25rem;
+  border: 0;
+  border-bottom: 1px solid #525252;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: #171717;
+  font: inherit;
+}
+
+.paperMeta {
+  display: grid;
+  gap: 0.2rem;
+  justify-items: end;
+  font-size: 0.72rem;
+}
+
+.paperTitle {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+
+.paperTitle span {
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.paperSection {
+  padding: 2.25rem 0;
+  border-bottom: 1px solid #a3a3a3;
+  scroll-margin-top: 7.5rem;
+}
+
+.sectionHeader h2 {
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.035em;
+}
+
+.sectionHeader span {
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.sectionHeader > p {
+  margin-top: 0.45rem;
+  max-width: 52rem;
+  color: #525252;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.wordBank {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem 1.2rem;
+  margin-top: 1.25rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid #d4d4d4;
+  background: #efefec;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.questionList {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.clozeText {
+  gap: 0.6rem;
+  padding: 1rem 0;
+  font-size: 0.9rem;
+  line-height: 2.3;
+}
+
+.blockQuestion,
+.sentenceQuestion {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e5e5;
+  font-size: 0.85rem;
+}
+
+.questionList > div:last-child .blockQuestion,
+.questionList > div:last-child .sentenceQuestion {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.questionNumber {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 1.35rem;
+  height: 1.35rem;
+  place-items: center;
+  border: 1px solid #a3a3a3;
+  color: #262626;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.inlineQuestion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.inlineQuestion .questionNumber {
+  margin-right: 0.35rem;
+  transform: translateY(0.28rem);
+}
+
+.inlineInput,
+.inlineSelect,
+.sentenceInput,
+.matchSelect,
+.paperTextarea {
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: #111827;
+}
+
+.inlineInput,
+.inlineSelect {
+  min-width: 7rem;
+  max-width: 13rem;
+  padding: 0.15rem 0.35rem;
+  border-bottom: 1px solid #525252;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.inlineInput:focus,
+.inlineSelect:focus,
+.sentenceInput:focus,
+.matchSelect:focus,
+.paperTextarea:focus,
+.nameField input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 2px 0 #2563eb;
+}
+
+.choiceLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.25rem;
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.sentenceInput {
+  width: 100%;
+  margin-top: 0.8rem;
+  padding: 0.35rem 0.2rem;
+  border-bottom: 1px solid #737373;
+  font-family: "Segoe Print", "Bradley Hand", cursive;
+  font-size: 0.9rem;
+}
+
+.matchingTable,
+.answerBankTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.matchingTable td,
+.matchingTable th,
+.answerBankTable td {
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid #d4d4d4;
+  text-align: left;
+}
+
+.matchingTable tr:last-child td,
+.matchingTable tr:last-child th,
+.answerBankTable tr:last-child td {
+  border-bottom: 0;
+}
+
+.matchingTable td:first-child,
+.answerBankTable td:first-child {
+  width: 2rem;
+  border-right: 1px solid #d4d4d4;
+  text-align: center;
+  font-weight: 800;
+}
+
+.matchingTable th {
+  font-weight: 500;
+}
+
+.matchingTable td:last-child {
+  width: 3.3rem;
+  border-left: 1px solid #d4d4d4;
+}
+
+.answerBankTable td:first-child {
+  background: #f5f5f5;
+}
+
+.matchSelect {
+  width: 100%;
+  padding: 0.15rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.openTask {
+  padding-bottom: 2rem;
+  border-bottom: 1px dashed #a3a3a3;
+}
+
+.openTask:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.paperTextarea {
+  width: 100%;
+  min-height: 13rem;
+  resize: vertical;
+  padding: 0.45rem 0.25rem;
+  border: 1px solid #a3a3a3;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 1.68rem,
+    #d4d4d4 1.72rem
+  );
+  font-family: "Segoe Print", "Bradley Hand", cursive;
+  font-size: 0.9rem;
+  line-height: 1.72rem;
+}
+
+.completeButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  margin-top: 0.75rem;
+  padding: 0 0.8rem;
+  border: 1px solid #a3a3a3;
+  background: white;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.completeButtonActive {
+  border-color: #166534;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.paperFooter {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1rem;
+  color: #525252;
+  font-size: 0.68rem;
+}
+
+.resultStamp {
+  display: grid;
+  width: 5.4rem;
+  height: 3.2rem;
+  place-items: center;
+  border: 2px solid #dc2626;
+  border-radius: 50%;
+  color: #dc2626;
+  font-size: 1.15rem;
+  font-weight: 800;
+  transform: rotate(-5deg);
+}
+
+@media (max-width: 640px) {
+  .examToolbar {
+    top: 3.85rem;
+    align-items: flex-start;
+    padding-block: 0.55rem;
+  }
+
+  .examToolbar > div:first-child > p:first-child {
+    display: none;
+  }
+
+  .sectionNav {
+    top: 7.9rem;
+  }
+
+  .paperHeader {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .paperMeta {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    grid-auto-flow: column;
+    justify-content: space-between;
+    justify-items: start;
+  }
+
+  .paperTitle {
+    display: grid;
+  }
+
+  .paper {
+    padding-inline: 1rem;
+  }
+
+  .inlineInput,
+  .inlineSelect {
+    min-width: 6.5rem;
+  }
+}
+
+@media print {
+  .examToolbar,
+  .sectionNav {
+    display: none;
+  }
+
+  .paper {
+    width: 100%;
+    margin: 0;
+    padding: 1.3cm;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .paperSection {
+    break-inside: avoid;
+  }
+}

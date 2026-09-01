@@ -1,30 +1,198 @@
 import { questionsById } from './questions';
+import type { LessonNumber, StudyQuestion } from './types';
 
-export const mockQuestionIds = [
-  'l13-listening-weekend',
-  'l15-listening-apartment',
-  'l16-listening-service',
-  'l18-listening-doctor',
-  'l13-reading-city-tip',
-  'l13-reading-place',
-  'l15-floor',
-  'l15-reading-match-ad',
-  'l16-reading-calendar',
-  'l17-reading-career',
-  'l18-reading-forum',
-  'l13-es-gibt-einen',
-  'l13-gefallen-mir',
-  'l14-vor-dem',
-  'l14-direction-right',
-  'l15-seinen-schreibtisch',
-  'l16-in-zwei-tagen',
-  'l17-werden-er',
-  'l17-mit-meinem',
-  'l18-sollen',
+const photoTestSource = {
+  label: 'Wzorzec z testów użytkownika · zakres Lektion 13–18',
+  type: 'teacher' as const,
+};
+
+const clozeQuestions = [
+  {
+    id: 'mock-cloze-park', lesson: 13, topic: 'miasto', skill: 'reading', kind: 'input',
+    prompt: 'Im Zentrum gibt es einen großen ___.', acceptedAnswers: ['Park', 'park'], correctAnswer: 'Park',
+    explanation: '`der Park` pasuje do informacji o miejscu w centrum miasta.', source: photoTestSource, difficulty: 1,
+  },
+  {
+    id: 'mock-cloze-schloss', lesson: 13, topic: 'atrakcje w mieście', skill: 'reading', kind: 'input',
+    prompt: 'Am Samstag besucht Lea das alte ___.', acceptedAnswers: ['Schloss', 'schloss'], correctAnswer: 'Schloss',
+    explanation: '`das Schloss besuchen` oznacza zwiedzać zamek.', source: photoTestSource, difficulty: 1,
+  },
+  {
+    id: 'mock-cloze-gefaellt', lesson: 13, topic: 'gefallen', skill: 'reading', kind: 'input',
+    prompt: 'Die Stadt ___ ihr sehr.', acceptedAnswers: ['gefällt'], correctAnswer: 'gefällt',
+    explanation: 'Podmiot `die Stadt` jest w liczbie pojedynczej, dlatego używamy `gefällt`.', source: photoTestSource, difficulty: 1,
+  },
+  {
+    id: 'mock-cloze-wohnung', lesson: 15, topic: 'mieszkanie', skill: 'reading', kind: 'input',
+    prompt: 'Lea wohnt in einer kleinen ___.', acceptedAnswers: ['Wohnung', 'wohnung'], correctAnswer: 'Wohnung',
+    explanation: '`in einer kleinen Wohnung` opisuje miejsce zamieszkania.', source: photoTestSource, difficulty: 1,
+  },
+  {
+    id: 'mock-cloze-balkon', lesson: 15, topic: 'mieszkanie', skill: 'reading', kind: 'input',
+    prompt: 'Ihr Zimmer hat einen sonnigen ___.', acceptedAnswers: ['Balkon', 'balkon'], correctAnswer: 'Balkon',
+    explanation: '`der Balkon` jest częścią mieszkania i po `haben` stoi w Akkusativie.', source: photoTestSource, difficulty: 1,
+  },
+  {
+    id: 'mock-cloze-heizung', lesson: 16, topic: 'awarie', skill: 'reading', kind: 'input',
+    prompt: 'Gestern war die ___ kaputt.', acceptedAnswers: ['Heizung', 'heizung'], correctAnswer: 'Heizung',
+    explanation: '`Die Heizung ist kaputt` to typowe zgłoszenie awarii.', source: photoTestSource, difficulty: 1,
+  },
+  {
+    id: 'mock-cloze-termin', lesson: 16, topic: 'terminy', skill: 'reading', kind: 'input',
+    prompt: 'Deshalb hat Lea heute einen ___ mit dem Techniker.', acceptedAnswers: ['Termin', 'termin'], correctAnswer: 'Termin',
+    explanation: 'Naturalne połączenie brzmi `einen Termin mit dem Techniker haben`.', source: photoTestSource, difficulty: 1,
+  },
+  {
+    id: 'mock-cloze-werden', lesson: 17, topic: 'plany zawodowe', skill: 'reading', kind: 'input',
+    prompt: 'Später will Lea Ärztin ___.', acceptedAnswers: ['werden'], correctAnswer: 'werden',
+    explanation: 'Po `will` bezokolicznik `werden` stoi na końcu zdania.', source: photoTestSource, difficulty: 1,
+  },
+  {
+    id: 'mock-cloze-ausland', lesson: 17, topic: 'plany i podróże', skill: 'reading', kind: 'input',
+    prompt: 'Sie möchte ein Jahr im ___ leben.', acceptedAnswers: ['Ausland', 'ausland'], correctAnswer: 'Ausland',
+    explanation: 'Stałe połączenie brzmi `im Ausland leben`.', source: photoTestSource, difficulty: 1,
+  },
+  {
+    id: 'mock-cloze-sport', lesson: 18, topic: 'zdrowe nawyki', skill: 'reading', kind: 'input',
+    prompt: 'Lea treibt regelmäßig ___, um gesund zu bleiben.', acceptedAnswers: ['Sport', 'sport'], correctAnswer: 'Sport',
+    explanation: '`Sport treiben` to stałe połączenie oznaczające uprawianie sportu.', source: photoTestSource, difficulty: 1,
+  },
+] satisfies StudyQuestion[];
+
+export const matchingAnswerBank = [
+  { code: 'A', label: 'der Brunnen' },
+  { code: 'B', label: 'einen schönen Park empfehlen' },
+  { code: 'C', label: 'nach rechts abbiegen' },
+  { code: 'D', label: 'die Kreuzung' },
+  { code: 'E', label: 'der Flur' },
+  { code: 'F', label: 'die Nebenkosten' },
+  { code: 'G', label: 'einen Termin verschieben' },
+  { code: 'H', label: 'die Heizung' },
+  { code: 'I', label: 'Arzt / Ärztin' },
+  { code: 'J', label: 'im Ausland leben' },
+  { code: 'K', label: 'Kopfschmerzen haben' },
+  { code: 'L', label: 'sich ausruhen' },
 ] as const;
 
-export const mockQuestions = mockQuestionIds.map((id) => {
-  const question = questionsById.get(id);
+const matchingOptions = matchingAnswerBank.map((answer) => answer.label);
+
+const matchingRows: readonly [string, LessonNumber, string, string][] = [
+  ['mock-match-brunnen', 13, 'fontanna / studnia', 'der Brunnen'],
+  ['mock-match-park', 13, 'polecić piękny park', 'einen schönen Park empfehlen'],
+  ['mock-match-rechts', 14, 'skręcić w prawo', 'nach rechts abbiegen'],
+  ['mock-match-kreuzung', 14, 'skrzyżowanie', 'die Kreuzung'],
+  ['mock-match-flur', 15, 'korytarz / przedpokój', 'der Flur'],
+  ['mock-match-nebenkosten', 15, 'opłaty dodatkowe', 'die Nebenkosten'],
+  ['mock-match-termin', 16, 'przełożyć termin', 'einen Termin verschieben'],
+  ['mock-match-heizung', 16, 'ogrzewanie', 'die Heizung'],
+  ['mock-match-arzt', 17, 'lekarz / lekarka', 'Arzt / Ärztin'],
+  ['mock-match-ausland', 17, 'mieszkać za granicą', 'im Ausland leben'],
+  ['mock-match-kopf', 18, 'mieć ból głowy', 'Kopfschmerzen haben'],
+  ['mock-match-rest', 18, 'odpoczywać', 'sich ausruhen'],
+];
+
+const matchingQuestions: StudyQuestion[] = matchingRows.map(([id, lesson, prompt, answer]) => ({
+  id,
+  lesson,
+  topic: 'słownictwo przekrojowe',
+  skill: 'vocabulary',
+  kind: 'choice',
+  prompt,
+  options: matchingOptions,
+  acceptedAnswers: [answer],
+  correctAnswer: answer,
+  explanation: `Poprawne połączenie: ${prompt} → ${answer}.`,
+  source: photoTestSource,
+  difficulty: 1,
+}));
+
+const supplementalQuestions: StudyQuestion[] = [...clozeQuestions, ...matchingQuestions];
+const supplementalById = new Map(supplementalQuestions.map((question) => [question.id, question]));
+
+export const paperTestSections = [
+  {
+    id: 'hoeren',
+    title: 'HÖRVERSTEHEN',
+    instruction: 'Hören Sie jede Aufnahme zweimal. Kreuzen Sie die richtige Antwort an.',
+    layout: 'listening',
+    questionIds: [
+      'l13-listening-weekend',
+      'l14-listening-route',
+      'l15-listening-apartment',
+      'l16-listening-service',
+      'l17-listening-plans',
+      'l18-listening-doctor',
+    ],
+  },
+  {
+    id: 'lesen-luecken',
+    title: 'LESEVERSTEHEN 1',
+    instruction: 'Lesen Sie den Text. Ergänzen Sie jede Lücke mit einem Wort aus dem Kasten. Jedes Wort passt einmal.',
+    layout: 'cloze',
+    wordBank: ['Ausland', 'Balkon', 'gefällt', 'Heizung', 'Park', 'Schloss', 'Sport', 'Termin', 'werden', 'Wohnung'],
+    questionIds: clozeQuestions.map((question) => question.id),
+  },
+  {
+    id: 'lesen-informationen',
+    title: 'LESEVERSTEHEN 2',
+    instruction: 'Lesen Sie die kurzen Informationen. Entscheiden Sie oder wählen Sie die passende Antwort.',
+    layout: 'reading',
+    questionIds: [
+      'l13-reading-city-tip',
+      'l14-reading-opening-hours',
+      'l15-reading-match-ad',
+      'l16-reading-calendar',
+      'l17-reading-career',
+      'l18-reading-forum',
+    ],
+  },
+  {
+    id: 'wortschatz',
+    title: 'WORTSCHATZ',
+    instruction: 'Was passt zusammen? Ordnen Sie A–L zu. Jede Antwort passt einmal.',
+    layout: 'matching',
+    questionIds: matchingQuestions.map((question) => question.id),
+  },
+  {
+    id: 'grammatik-luecken',
+    title: 'GRAMMATIK 1',
+    instruction: 'Ergänzen Sie die richtige Form. Schreiben Sie nur das fehlende Wort.',
+    layout: 'gaps',
+    questionIds: [
+      'l13-es-gibt-einen',
+      'l13-gefallen-mir',
+      'l14-vor-dem',
+      'l14-neben-der',
+      'l15-seinen-schreibtisch',
+      'l16-in-zwei-tagen',
+      'l17-werden-er',
+      'l17-mit-meinem',
+      'l18-sollen',
+      'l18-dieser-mann',
+    ],
+  },
+  {
+    id: 'grammatik-saetze',
+    title: 'GRAMMATIK 2',
+    instruction: 'Bilden oder korrigieren Sie ganze Sätze. Achten Sie auf Satzklammer, Fälle und trennbare Verben.',
+    layout: 'sentences',
+    questionIds: [
+      'l14-order-route',
+      'l14-between',
+      'l16-reschedule',
+      'l17-wollen-order',
+      'l18-writing-purpose',
+      'l18-correct-separable',
+    ],
+  },
+] as const;
+
+export type PaperTestSection = (typeof paperTestSections)[number];
+
+export const mockQuestionIds = paperTestSections.flatMap((section) => section.questionIds);
+
+export const mockQuestions: StudyQuestion[] = mockQuestionIds.map((id) => {
+  const question = questionsById.get(id) ?? supplementalById.get(id);
   if (!question) throw new Error(`Missing mock question: ${id}`);
   return question;
 });

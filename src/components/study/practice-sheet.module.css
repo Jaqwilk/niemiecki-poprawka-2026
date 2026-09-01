@@ -1,0 +1,561 @@
+.practiceToolbar {
+  position: sticky;
+  z-index: 20;
+  top: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(100%, 58rem);
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--color-fd-border);
+  border-radius: 0.75rem;
+  background: color-mix(in oklab, var(--color-fd-background) 94%, transparent);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.practiceToolbar > div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+}
+
+.practiceToolbar strong {
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.practiceToolbar span {
+  color: var(--color-fd-muted-foreground);
+  font-size: 0.7rem;
+}
+
+.practiceToolbar button {
+  min-height: 2rem;
+  color: var(--color-fd-muted-foreground);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.paper,
+.finishedPaper {
+  width: min(100%, 58rem);
+  color: #171717;
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.012), rgba(0, 0, 0, 0.012)),
+    #fffef9;
+  border: 1px solid #d4d4d4;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.11);
+  color-scheme: light;
+}
+
+.paper {
+  min-height: 44rem;
+  padding: clamp(1.1rem, 4vw, 3.2rem);
+}
+
+.paperHeader {
+  display: grid;
+  grid-template-columns: auto minmax(10rem, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #171717;
+}
+
+.paperMark {
+  display: grid;
+  width: 3.25rem;
+  height: 3.25rem;
+  flex: 0 0 auto;
+  place-items: center;
+  background: #171717;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 900;
+  line-height: 0.84;
+  letter-spacing: -0.05em;
+}
+
+.headerIdentity {
+  display: flex;
+  align-items: end;
+  gap: 0.5rem;
+  min-width: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.nameLine {
+  width: 100%;
+  border-bottom: 1px solid #525252;
+}
+
+.paperMeta {
+  display: grid;
+  justify-items: end;
+  font-size: 0.68rem;
+}
+
+.paperTitle {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.paperTitle span {
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.progressTrack {
+  height: 0.22rem;
+  margin-top: 0.5rem;
+  overflow: hidden;
+  background: #e5e5e5;
+}
+
+.progressTrack span {
+  display: block;
+  height: 100%;
+  background: #262626;
+  transition: width 220ms ease;
+}
+
+.exerciseBody {
+  padding: clamp(1.6rem, 4vw, 2.75rem) 0 1.5rem;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sectionHeading h2 {
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.035em;
+}
+
+.sectionHeading p,
+.sectionHeading > span {
+  color: #525252;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.sectionHeading p {
+  margin-top: 0.18rem;
+}
+
+.instruction {
+  margin-top: 0.75rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #a3a3a3;
+  color: #525252;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.audioBox {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border: 1px solid #d4d4d4;
+  background: #f3f3f0;
+}
+
+.audioBox small {
+  color: #737373;
+  font-size: 0.62rem;
+}
+
+.questionBlock {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.questionNumber {
+  display: grid;
+  width: 1.45rem;
+  height: 1.45rem;
+  place-items: center;
+  border: 1px solid #737373;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.prompt {
+  white-space: pre-line;
+  font-size: clamp(0.92rem, 2vw, 1.05rem);
+  font-weight: 650;
+  line-height: 1.75;
+}
+
+.answerArea {
+  margin: 1.5rem 0 0 2.2rem;
+}
+
+.optionList {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.7rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid transparent;
+  border-bottom-color: #d4d4d4;
+  text-align: left;
+  font-size: 0.82rem;
+}
+
+.option:hover:not(:disabled) {
+  background: #f5f5f2;
+}
+
+.option > span {
+  display: grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #737373;
+  border-radius: 50%;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.optionSelected {
+  border-color: #171717;
+  background: #f1f1ed;
+}
+
+.optionSelected > span {
+  background: #171717;
+  color: white;
+}
+
+.handwritingLine {
+  min-height: 3rem;
+  padding: 0.65rem 0.25rem;
+  border-bottom: 1px solid #525252;
+  font-family: "Segoe Print", "Bradley Hand", cursive;
+  font-size: 0.9rem;
+}
+
+.handwritingLine span {
+  color: #a3a3a3;
+}
+
+.tokenList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+}
+
+.tokenList button {
+  min-height: 2.15rem;
+  padding: 0 0.65rem;
+  border: 1px solid #a3a3a3;
+  background: white;
+  font-size: 0.75rem;
+}
+
+.tokenList button:hover:not(:disabled) {
+  background: #f1f1ed;
+}
+
+.tokenList button:disabled {
+  opacity: 0.28;
+}
+
+.tokenList .clearButton {
+  border-color: transparent;
+  background: transparent;
+  color: #737373;
+}
+
+.paperInput {
+  width: 100%;
+  min-height: 5rem;
+  resize: vertical;
+  padding: 0.2rem 0.35rem;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background-color: transparent;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 1.65rem,
+    #cfcfcf 1.69rem
+  );
+  color: #111827;
+  font-family: "Segoe Print", "Bradley Hand", cursive;
+  font-size: 0.88rem;
+  line-height: 1.69rem;
+}
+
+.paperInput:focus {
+  box-shadow: 0 2px 0 #2563eb;
+}
+
+.teacherNote,
+.correctNote {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.7rem;
+  margin: 1.5rem 0 0 2.2rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid;
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.teacherNote {
+  border-color: #fca5a5;
+  background: #fff7f7;
+  color: #991b1b;
+  transform: rotate(-0.25deg);
+}
+
+.correctNote {
+  border-color: #86b99a;
+  background: #f3fbf5;
+  color: #14532d;
+}
+
+.teacherNote > svg,
+.correctNote > svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.05rem;
+}
+
+.teacherNote p,
+.correctNote p {
+  margin-top: 0.3rem;
+}
+
+.teacherNote span {
+  font-weight: 800;
+}
+
+.teacherNote .mutedNote {
+  color: #7f1d1d;
+  opacity: 0.75;
+}
+
+.correctNote small {
+  display: block;
+  margin-top: 0.45rem;
+  opacity: 0.72;
+}
+
+.retryButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.2rem;
+  margin-top: 0.7rem;
+  padding: 0 0.7rem;
+  border: 1px solid #dc2626;
+  background: white;
+  color: #991b1b;
+  font-weight: 800;
+}
+
+.retryButton svg {
+  width: 0.9rem;
+}
+
+.retryMessage {
+  margin: 0.8rem 0 0 2.2rem;
+  color: #991b1b;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.checkButton,
+.nextButton,
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.65rem;
+  padding: 0 1rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.checkButton,
+.nextButton {
+  margin: 1.5rem 0 0 2.2rem;
+  background: #171717;
+  color: white;
+}
+
+.checkButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.nextButton {
+  gap: 0.45rem;
+}
+
+.nextButton svg {
+  width: 1rem;
+}
+
+.paperFooter {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #d4d4d4;
+  color: #525252;
+  font-size: 0.65rem;
+}
+
+.finishedPaper {
+  padding: clamp(1.1rem, 4vw, 3.2rem);
+}
+
+.finishedPaper h2 {
+  margin-top: 0.2rem;
+  font-size: 1.15rem;
+  font-weight: 850;
+}
+
+.kicker {
+  color: #525252;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.scoreStamp {
+  display: grid;
+  width: 5.2rem;
+  height: 3.1rem;
+  place-items: center;
+  border: 2px solid #dc2626;
+  border-radius: 50%;
+  color: #dc2626;
+  font-size: 1rem;
+  font-weight: 900;
+  transform: rotate(-5deg);
+}
+
+.finishedBody {
+  max-width: 38rem;
+  margin: 2.4rem auto 1rem;
+  text-align: center;
+}
+
+.handwrittenResult {
+  color: #dc2626;
+  font-family: "Segoe Print", "Bradley Hand", cursive;
+  font-size: 1.75rem;
+  font-weight: 800;
+  transform: rotate(-2deg);
+}
+
+.finishedBody > p:nth-child(2) {
+  margin-top: 1rem;
+  color: #525252;
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+
+.finishedActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+}
+
+.primaryButton {
+  background: #171717;
+  color: white;
+}
+
+.secondaryButton {
+  border: 1px solid #a3a3a3;
+}
+
+@media (max-width: 640px) {
+  .practiceToolbar {
+    top: 3.85rem;
+  }
+
+  .practiceToolbar span {
+    display: none;
+  }
+
+  .paperHeader {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .paperMeta {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    grid-auto-flow: column;
+    justify-content: space-between;
+    justify-items: start;
+  }
+
+  .paperTitle {
+    display: grid;
+  }
+
+  .paper,
+  .finishedPaper {
+    padding-inline: 1rem;
+  }
+
+  .answerArea,
+  .teacherNote,
+  .correctNote,
+  .retryMessage,
+  .checkButton,
+  .nextButton {
+    margin-left: 0;
+  }
+
+  .option {
+    padding-inline: 0.35rem;
+  }
+}
+
+@media print {
+  .practiceToolbar {
+    display: none;
+  }
+
+  .paper,
+  .finishedPaper {
+    width: 100%;
+    border: 0;
+    box-shadow: none;
+  }
+}
