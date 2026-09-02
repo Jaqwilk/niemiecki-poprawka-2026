@@ -173,6 +173,34 @@ Słowa dodatkowe::mit dabei::wliczone / dostępne
 Słowa dodatkowe::das Semester::semestr
 Słowa dodatkowe::übermorgen::pojutrze
 Słowa dodatkowe::aufräumen::sprzątać
+Fokus Beruf 5 — aktywnie::der Empfang, die Empfänge::recepcja::Bekomme ich die Briefumschläge am Empfang?
+Fokus Beruf 5 — aktywnie::die Kantine, die Kantinen::kantyna / stołówka
+Fokus Beruf 5 — aktywnie::der Konferenzraum, die Konferenzräume::sala konferencyjna
+Fokus Beruf 5 — aktywnie::der Kopierraum, die Kopierräume::pomieszczenie z kopiarką
+Fokus Beruf 5 — aktywnie::die Teeküche, die Teeküchen::mała kuchnia biurowa
+Fokus Beruf 5 — aktywnie::die Toilette, die Toiletten::toaleta
+Fokus Beruf 5 — aktywnie::der Briefumschlag, die Briefumschläge::koperta
+Fokus Beruf 5 — aktywnie::der Locher, die Locher::dziurkacz
+Fokus Beruf 5 — aktywnie::der Notizzettel, die Notizzettel::kartka do notatek
+Fokus Beruf 5 — aktywnie::der Ordner, die Ordner::segregator
+Fokus Beruf 5 — aktywnie::der Papierkorb, die Papierkörbe::kosz na papier
+Fokus Beruf 5 — aktywnie::die Schere, die Scheren::nożyczki
+Fokus Beruf 5 — aktywnie::der Tacker, die Tacker::zszywacz
+Fokus Beruf 5 — aktywnie::der Textmarker, die Textmarker::zakreślacz
+Fokus Beruf 5 — aktywnie::Wo ist …?::Gdzie jest…?
+Fokus Beruf 5 — aktywnie::Wo finde ich …?::Gdzie znajdę…?
+Fokus Beruf 5 — aktywnie::im Regal neben …::w regale obok…
+Fokus Beruf 5 — aktywnie::hinter der Tür::za drzwiami
+Fokus Beruf 5 — aktywnie::Kann ich Sie noch etwas fragen?::Czy mogę jeszcze o coś zapytać?
+Fokus Beruf 5 — aktywnie::Bekomme ich die … am Empfang?::Czy dostanę… w recepcji?
+Fokus Beruf 5 — rozpoznawanie::das Einzelbüro, die Einzelbüros::biuro dla jednej osoby
+Fokus Beruf 5 — rozpoznawanie::das Zweierbüro, die Zweierbüros::biuro dla dwóch osób
+Fokus Beruf 5 — rozpoznawanie::das Großraumbüro, die Großraumbüros::biuro typu open space
+Fokus Beruf 5 — rozpoznawanie::das Headset, die Headsets::zestaw słuchawkowy
+Fokus Beruf 5 — rozpoznawanie::der Lautsprecher, die Lautsprecher::głośnik
+Haus am See — rozpoznawanie::die Ferienwohnung, die Ferienwohnungen::mieszkanie wakacyjne
+Haus am See — rozpoznawanie::direkt am See::bezpośrednio nad jeziorem
+Haus am See — rozpoznawanie::pro Nacht::za noc
 `,
   16: `
 Problemy i reakcje::ein Problem haben::mieć problem::Wir haben hier ein Problem.
@@ -217,6 +245,34 @@ Słowa dodatkowe::das Praktikum::praktyka / staż
 Słowa dodatkowe::der Kurs::kurs
 Słowa dodatkowe::das Training::trening
 Słowa dodatkowe::die Pause::przerwa
+Fokus Beruf 6 — aktywnie::die Datei, die Dateien::plik
+Fokus Beruf 6 — aktywnie::der Termin, die Termine::termin
+Fokus Beruf 6 — aktywnie::die Präsentation, die Präsentationen::prezentacja
+Fokus Beruf 6 — aktywnie::die Sprachnachricht, die Sprachnachrichten::wiadomość głosowa
+Fokus Beruf 6 — aktywnie::die Telefonnotiz, die Telefonnotizen::notatka telefoniczna
+Fokus Beruf 6 — aktywnie::der Arbeitsauftrag, die Arbeitsaufträge::polecenie służbowe
+Fokus Beruf 6 — aktywnie::Dateien schicken::wysłać pliki
+Fokus Beruf 6 — aktywnie::eine Präsentation vorbereiten::przygotować prezentację
+Fokus Beruf 6 — aktywnie::jemanden anrufen::zadzwonić do kogoś
+Fokus Beruf 6 — aktywnie::einen Teamarbeit-Workshop verschieben::przełożyć warsztat pracy zespołowej
+Fokus Beruf 6 — aktywnie::einen Termin absagen oder verschieben::odwołać lub przełożyć termin
+Fokus Beruf 6 — aktywnie::eine Telefonnotiz schreiben::napisać notatkę telefoniczną
+Fokus Beruf 6 — rozpoznawanie::die Produktinformation, die Produktinformationen::informacja o produkcie
+Fokus Beruf 6 — rozpoznawanie::das Büromaterial::materiały biurowe
+Fokus Beruf 6 — rozpoznawanie::das Telefonmodell, die Telefonmodelle::model telefonu
+Fokus Beruf 6 — rozpoznawanie::die Marketingabteilung, die Marketingabteilungen::dział marketingu
+Fokus Beruf 6 — rozpoznawanie::die Marktanalyse, die Marktanalysen::analiza rynku
+Winda — rozpoznawanie::eine graue Jacke::szara kurtka
+Winda — rozpoznawanie::einen bunten Schal::kolorowy szalik
+Winda — rozpoznawanie::eine Brille tragen::nosić okulary
+Winda — rozpoznawanie::eine schwarze Weste::czarna kamizelka
+Winda — rozpoznawanie::eine schwarze Tasche::czarna torba
+Winda — rozpoznawanie::gut gelaunt / fröhlich::w dobrym humorze / wesoły
+Winda — rozpoznawanie::die Klaustrophobie::klaustrofobia
+Winda — rozpoznawanie::die Aufzugsfirma, die Aufzugsfirmen::firma serwisująca windy
+Winda — rozpoznawanie::Fahren Sie ins Erdgeschoss?::Czy jedzie Pan/Pani na parter?
+Winda — rozpoznawanie::Was ist das denn!::Co to takiego!
+Winda — rozpoznawanie::Martha stellt Eric Fragen.::Martha zadaje Ericowi pytania.
 `,
   17: `
 Zawody i nauka::der Polizist, die Polizisten::policjant
@@ -392,4 +448,3 @@ export const flashcardCountsByLesson = Object.fromEntries(
     vocabularyFlashcards.filter((card) => card.lesson === lesson).length,
   ]),
 ) as Record<LessonNumber, number>;
-

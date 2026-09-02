@@ -20,6 +20,16 @@ const test = (printedPage: number) => ({
 
 const teacher = (label: string) => ({ label, type: 'teacher' as const });
 
+const fokusBeruf = (module: 5 | 6, title: string) => ({
+  label: `Momente A1.2 Fokus Beruf, Modul ${module}: ${title}`,
+  type: 'workbook' as const,
+});
+
+const moduleTest = (module: 5 | 6) => ({
+  label: `Momente A1.2 TEST, Modul ${module}`,
+  type: 'test' as const,
+});
+
 export const studyQuestions = [
   {
     id: 'l13-es-gibt-einen', lesson: 13, topic: 'es gibt + Akkusativ', skill: 'grammar', kind: 'choice',
@@ -184,6 +194,49 @@ export const studyQuestions = [
     acceptedAnswers: ['Sie kostet 700 Euro im Monat.'], correctAnswer: 'Sie kostet 700 Euro im Monat.',
     explanation: '`Wie teuer?` pyta o cenę; odpowiedź musi podać koszt.', source: test(21), difficulty: 1,
   },
+  {
+    id: 'l15-office-room', lesson: 15, topic: 'Fokus Beruf 5 · pomieszczenia', skill: 'vocabulary', kind: 'choice',
+    prompt: 'Wo kopiert man Dokumente?', options: ['Im Kopierraum.', 'In der Kantine.', 'In den Toiletten.'],
+    acceptedAnswers: ['Im Kopierraum.'], correctAnswer: 'Im Kopierraum.',
+    explanation: '`der Kopierraum` to pomieszczenie przeznaczone do kopiowania dokumentów.', source: fokusBeruf(5, 'Erster Arbeitstag'), difficulty: 1,
+  },
+  {
+    id: 'l15-office-supply', lesson: 15, topic: 'Fokus Beruf 5 · wyposażenie', skill: 'vocabulary', kind: 'input',
+    instruction: 'Antworten Sie mit dem passenden Gegenstand.',
+    prompt: 'Was braucht man zum Heften?', acceptedAnswers: ['der Tacker', 'Tacker', 'einen Tacker'], correctAnswer: 'der Tacker',
+    explanation: '`der Tacker` to zszywacz; służy do łączenia kartek.', hint: 'Der Gegenstand beginnt mit T.', source: fokusBeruf(5, 'Erster Arbeitstag'), difficulty: 1,
+  },
+  {
+    id: 'l15-office-position', lesson: 15, topic: 'Fokus Beruf 5 · położenie', skill: 'communication', kind: 'order',
+    prompt: 'Bringen Sie die Antwort in die richtige Reihenfolge.', tokens: ['Die Textmarker', 'sind', 'im Regal', 'neben', 'den Ordnern'],
+    acceptedAnswers: ['Die Textmarker sind im Regal neben den Ordnern'], correctAnswer: 'Die Textmarker sind im Regal neben den Ordnern.',
+    explanation: 'Odpowiedź podaje dokładne miejsce: w regale obok segregatorów.', source: fokusBeruf(5, 'Erster Arbeitstag'), difficulty: 2,
+  },
+  {
+    id: 'l15-office-dialogue', lesson: 15, topic: 'Fokus Beruf 5 · dialog', skill: 'communication', kind: 'dialogue',
+    prompt: '— Kann ich Sie noch etwas fragen?\n— Ja, natürlich.\n— ___\n— Hinter der Tür.',
+    options: ['Wo ist der Konferenzraum?', 'Wie teuer ist der Tacker?', 'Wann ist die Kantine?'],
+    acceptedAnswers: ['Wo ist der Konferenzraum?'], correctAnswer: 'Wo ist der Konferenzraum?',
+    explanation: 'Odpowiedź `Hinter der Tür` wskazuje miejsce, więc pasuje pytanie `Wo ist …?`.', source: fokusBeruf(5, 'Erster Arbeitstag'), difficulty: 1,
+  },
+  {
+    id: 'l15-email-six-points', lesson: 15, topic: 'TEST Modul 5 · pełny e-mail', skill: 'writing', kind: 'input',
+    instruction: 'Schreiben Sie eine E-Mail. Antworten Sie auf alle sechs Fragen.',
+    prompt: 'Wie geht es dir? Wo lebst du jetzt? Was machst du? Wie gefällt es dir dort? Was gibt es in deiner Stadt? Was gibt es dort nicht?',
+    acceptedAnswers: ['Hallo Mia, mir geht es gut. Ich lebe jetzt in Potsdam. Ich studiere hier und arbeite am Wochenende. Es gefällt mir dort sehr gut. In meiner Stadt gibt es einen Park, ein Museum und viele Cafés. Leider gibt es dort kein Schwimmbad. Liebe Grüße, Alex'],
+    correctAnswer: 'Hallo Mia, mir geht es gut. Ich lebe jetzt in Potsdam. Ich studiere hier und arbeite am Wochenende. Es gefällt mir dort sehr gut. In meiner Stadt gibt es einen Park, ein Museum und viele Cafés. Leider gibt es dort kein Schwimmbad. Liebe Grüße, Alex',
+    explanation: 'Pełna odpowiedź zawiera osobne zdanie do każdego z sześciu punktów. Inne poprawne dane osobiste również są akceptowane przez ocenę AI.',
+    hint: 'Odznacz kolejno sześć informacji: samopoczucie, miejsce, zajęcie, ocena, co jest i czego nie ma.', source: moduleTest(5), difficulty: 3,
+  },
+  {
+    id: 'l15-lake-voice-message', lesson: 15, topic: 'Urlaub im Haus am See', skill: 'speaking', kind: 'input',
+    instruction: 'Lesen Sie die Anzeige. Nehmen Sie eine kurze Sprachnachricht auf und schreiben Sie danach Ihre Antwort auf.',
+    prompt: 'HAUS AM SEE · Ferienwohnung direkt am See · 65 m² · 80 Euro pro Nacht · schwimmen, angeln, ein Boot mieten. Wo liegt die Wohnung? Wie groß ist sie? Wie viel kostet sie? Was kann man dort machen?',
+    acceptedAnswers: ['Hallo Nina, ich habe eine Ferienwohnung direkt am See gefunden. Sie ist 65 Quadratmeter groß und kostet 80 Euro pro Nacht. Dort können wir schwimmen, angeln und ein Boot mieten. Ruf mich bitte zurück.'],
+    correctAnswer: 'Hallo Nina, ich habe eine Ferienwohnung direkt am See gefunden. Sie ist 65 Quadratmeter groß und kostet 80 Euro pro Nacht. Dort können wir schwimmen, angeln und ein Boot mieten. Ruf mich bitte zurück.',
+    explanation: 'Wiadomość przekazuje położenie, metraż, cenę oraz czynności nad jeziorem. Inne naturalne sformułowania może zaakceptować AI.',
+    hint: 'Powiedz cztery rzeczy: `am See`, `65 m²`, `80 Euro pro Nacht` i możliwe aktywności.', source: moduleTest(5), difficulty: 3,
+  },
 
   {
     id: 'l16-vor-zwei-wochen', lesson: 16, topic: 'in / vor / nach', skill: 'grammar', kind: 'choice',
@@ -239,6 +292,54 @@ export const studyQuestions = [
     prompt: 'Sytuacja: „Der Aufzug steckt fest und das Handy hat kein Netz.” Zdanie: Można bez problemu zadzwonić po pomoc.', options: ['Richtig', 'Falsch'],
     acceptedAnswers: ['Falsch'], correctAnswer: 'Falsch',
     explanation: '`kein Netz haben` oznacza brak zasięgu.', source: teacher('Alltagssituation 12.05.2026'), difficulty: 1,
+  },
+  {
+    id: 'l16-files-order', lesson: 16, topic: 'Fokus Beruf 6 · Arbeitsauftrag', skill: 'communication', kind: 'order',
+    prompt: 'Bringen Sie den Arbeitsauftrag in die richtige Reihenfolge.', tokens: ['Bitte', 'schicken', 'Sie', 'mir', 'die Dateien'],
+    acceptedAnswers: ['Bitte schicken Sie mir die Dateien'], correctAnswer: 'Bitte schicken Sie mir die Dateien.',
+    explanation: 'W formalnym poleceniu `schicken Sie` stoi bezpośrednio po `Bitte`.', source: fokusBeruf(6, 'Arbeitsaufträge'), difficulty: 1,
+  },
+  {
+    id: 'l16-work-message-note', lesson: 16, topic: 'Fokus Beruf 6 · Telefonnotiz', skill: 'listening', kind: 'choice',
+    instruction: 'Hören Sie die Sprachnachricht und wählen Sie die vollständige Telefonnotiz.',
+    audioText: 'Guten Tag, hier ist Jana Favre aus der Marketingabteilung. Für die Präsentation des neuen Telefonmodells brauche ich bis Dienstag die Produktinformationen und die Marktanalyse. Bitte schicken Sie mir die Dateien und rufen Sie mich zurück.',
+    prompt: 'Welche Telefonnotiz ist vollständig?',
+    options: [
+      'Jana Favre · Marketing · Produktinformationen und Marktanalyse · bis Dienstag · Dateien schicken und zurückrufen',
+      'Jana Favre · Kantine · Büromaterial · heute · nichts tun',
+      'Herr David · Verkauf · Telefonmodell · bis Freitag · Termin absagen',
+    ],
+    acceptedAnswers: ['Jana Favre · Marketing · Produktinformationen und Marktanalyse · bis Dienstag · Dateien schicken und zurückrufen'],
+    correctAnswer: 'Jana Favre · Marketing · Produktinformationen und Marktanalyse · bis Dienstag · Dateien schicken und zurückrufen',
+    explanation: 'Poprawna notatka zawiera wszystkie cztery elementy: osobę, potrzebę, termin i działanie.', source: fokusBeruf(6, 'Arbeitsaufträge'), difficulty: 2,
+  },
+  {
+    id: 'l16-architecture-materials', lesson: 16, topic: 'Fokus Beruf 6 · Büromaterial', skill: 'reading', kind: 'choice',
+    prompt: 'Im Architekturbüro fehlen Briefumschläge, Notizzettel und Ordner. Was ist richtig?',
+    options: ['Das Büromaterial fehlt.', 'Die Marktanalyse ist fertig.', 'Der Aufzug ist kaputt.'],
+    acceptedAnswers: ['Das Büromaterial fehlt.'], correctAnswer: 'Das Büromaterial fehlt.',
+    explanation: 'Koperty, kartki do notatek i segregatory należą do `Büromaterial`.', source: fokusBeruf(6, 'Arbeitsaufträge'), difficulty: 1,
+  },
+  {
+    id: 'l16-phone-presentation', lesson: 16, topic: 'Fokus Beruf 6 · Präsentation', skill: 'communication', kind: 'dialogue',
+    prompt: '— Wir präsentieren morgen das neue Telefonmodell.\n— ___',
+    options: ['Wie viel kostet das neue Telefonmodell?', 'Wo ist die Aufzugsfirma krank?', 'Wer kopiert die Kantine?'],
+    acceptedAnswers: ['Wie viel kostet das neue Telefonmodell?'], correctAnswer: 'Wie viel kostet das neue Telefonmodell?',
+    explanation: 'W tej sytuacji trzeba dopytać o cenę prezentowanego telefonu.', source: fokusBeruf(6, 'Arbeitsaufträge'), difficulty: 1,
+  },
+  {
+    id: 'l16-workshop-child', lesson: 16, topic: 'Fokus Beruf 6 · termin', skill: 'writing', kind: 'input',
+    instruction: 'Schreiben Sie zwei vollständige Sätze.',
+    prompt: 'Ihre Tochter ist krank. Bitten Sie darum, den Teamarbeit-Workshop zu verschieben.',
+    acceptedAnswers: ['Meine Tochter ist krank. Können wir den Teamarbeit-Workshop verschieben'],
+    correctAnswer: 'Meine Tochter ist krank. Können wir den Teamarbeit-Workshop verschieben?',
+    explanation: 'Pierwsze zdanie podaje powód, a drugie jasno prosi o przełożenie warsztatu.', hint: 'Powód: `Meine Tochter ist krank.` Prośba: `Können wir … verschieben?`', source: fokusBeruf(6, 'Arbeitsaufträge'), difficulty: 2,
+  },
+  {
+    id: 'l16-elevator-details', lesson: 16, topic: 'winda · rozpoznawanie szczegółów', skill: 'reading', kind: 'true-false',
+    prompt: 'Text: „Die Frau trägt eine graue Jacke, einen bunten Schal und eine Brille. Sie ist gut gelaunt. Eric hat Klaustrophobie.” Aussage: Die Frau ist fröhlich, aber Eric hat Angst vor engen Räumen.',
+    options: ['Richtig', 'Falsch'], acceptedAnswers: ['Richtig'], correctAnswer: 'Richtig',
+    explanation: '`gut gelaunt / fröhlich` opisuje kobietę, a `Klaustrophobie` oznacza lęk przed ciasnymi pomieszczeniami.', source: teacher('Alltagssituation 08/12.05.2026'), difficulty: 2,
   },
 
   {

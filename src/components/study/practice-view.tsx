@@ -142,7 +142,7 @@ export function PracticeView() {
               </div>
               <div className={styles.previewTitle}>
                 <h2 id="practice-preview-title">INDIVIDUELLES TRAINING</h2>
-                <span>44 eigene Aufgaben</span>
+                <span>{practiceQuestions.length} eigene Aufgaben</span>
               </div>
             </header>
 

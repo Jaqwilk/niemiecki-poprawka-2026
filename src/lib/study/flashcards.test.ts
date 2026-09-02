@@ -20,6 +20,20 @@ describe('vocabulary flashcards', () => {
     }
   });
 
+  it('contains the added Fokus Beruf and elevator recognition vocabulary', () => {
+    const german = new Set(vocabularyFlashcards.map((card) => card.german));
+    for (const term of [
+      'der Kopierraum, die Kopierräume',
+      'der Textmarker, die Textmarker',
+      'die Telefonnotiz, die Telefonnotizen',
+      'die Marktanalyse, die Marktanalysen',
+      'die Aufzugsfirma, die Aufzugsfirmen',
+      'Martha stellt Eric Fragen.',
+    ]) {
+      expect(german.has(term), `Missing flashcard: ${term}`).toBe(true);
+    }
+  });
+
   it('normalizes diacritics, punctuation and German sharp s', () => {
     expect(normalizeFlashcardAnswer('  Die STRAẞE! ')).toBe('die strasse');
   });

@@ -18,6 +18,7 @@ import {
 import type { AnswerEvaluation, StudyQuestion } from '@/lib/study/types';
 import { AudioPrompt } from './audio-prompt';
 import { useStudyState } from './state-provider';
+import { VoiceRecorder } from './voice-recorder';
 import styles from './practice-sheet.module.css';
 
 type SessionResult = { questionId: string; firstTryCorrect: boolean };
@@ -253,6 +254,8 @@ export function PracticeSheet({ questions, draft, scopeLabel, onLeave }: Practic
               <small>Sie können die Aufnahme mehrmals hören.</small>
             </div>
           ) : null}
+
+          {question.skill === 'speaking' ? <VoiceRecorder /> : null}
 
           <div className={styles.questionBlock}>
             <span className={styles.questionNumber}>{index + 1}</span>

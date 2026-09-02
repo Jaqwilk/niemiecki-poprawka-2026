@@ -36,9 +36,9 @@ describe('practice question bank', () => {
     for (const id of examEquivalentQuestionIds) expect(practiceIds.has(id)).toBe(false);
   });
 
-  it('contains 44 unique exercises and covers every lesson', () => {
-    expect(practiceQuestions).toHaveLength(44);
-    expect(new Set(practiceQuestions.map((question) => question.id)).size).toBe(44);
+  it('contains 56 unique exercises and covers every lesson', () => {
+    expect(practiceQuestions).toHaveLength(56);
+    expect(new Set(practiceQuestions.map((question) => question.id)).size).toBe(56);
     for (const lesson of LESSONS) {
       expect(getPracticeQuestionsForLesson(lesson).length).toBeGreaterThanOrEqual(6);
     }

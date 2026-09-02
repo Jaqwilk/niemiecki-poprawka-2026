@@ -34,5 +34,7 @@ export const practiceFormats = [
   'Richtig / Falsch',
   'Dialoge',
   'Hörverstehen',
+  'Schreiben',
+  'Sprachnachrichten',
   'Übersetzung',
 ] as const;

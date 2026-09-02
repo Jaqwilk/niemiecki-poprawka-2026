@@ -3,9 +3,23 @@ import { isCorrectAnswer } from './engine';
 import { studyQuestions } from './questions';
 
 describe('source-grounded question bank', () => {
-  it('contains thirteen questions for every lesson from 13 through 18', () => {
+  it('contains at least thirteen questions for every lesson from 13 through 18', () => {
     for (let lesson = 13; lesson <= 18; lesson += 1) {
-      expect(studyQuestions.filter((question) => question.lesson === lesson)).toHaveLength(13);
+      expect(studyQuestions.filter((question) => question.lesson === lesson).length).toBeGreaterThanOrEqual(13);
+    }
+  });
+
+  it('covers the missing Fokus Beruf, module 5 writing and teacher elevator details', () => {
+    const ids = new Set(studyQuestions.map((question) => question.id));
+    for (const id of [
+      'l15-office-room',
+      'l15-email-six-points',
+      'l15-lake-voice-message',
+      'l16-work-message-note',
+      'l16-architecture-materials',
+      'l16-elevator-details',
+    ]) {
+      expect(ids.has(id), `Missing source-grounded exercise: ${id}`).toBe(true);
     }
   });
 

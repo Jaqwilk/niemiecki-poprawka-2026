@@ -15,4 +15,15 @@ describe('lesson learning structure', () => {
       expect(content).toContain('<OneThing>');
     });
   }
+
+  it('keeps added source material split into active and recognition sections', () => {
+    const lesson15 = readFileSync(join(process.cwd(), 'content', 'docs', 'lessons', '15.mdx'), 'utf8');
+    const lesson16 = readFileSync(join(process.cwd(), 'content', 'docs', 'lessons', '16.mdx'), 'utf8');
+
+    expect(lesson15).toContain('## Fokus Beruf 5 — Erster Arbeitstag');
+    expect(lesson15).toContain('Wie geht es dir?');
+    expect(lesson15).toContain('## Urlaub im Haus am See');
+    expect(lesson16).toContain('## Fokus Beruf 6 — Arbeitsaufträge');
+    expect(lesson16).toContain('### Dodatkowe szczegóły — wystarczy rozpoznawać');
+  });
 });
