@@ -161,6 +161,10 @@ Klient nigdy nie otrzymuje klucza API. Endpoint waliduje długość i kształt w
 Prompt systemowy wymaga, aby tutor:
 
 - odpowiadał po polsku z niemieckimi przykładami;
+- tłumaczył naturalny sens przed ewentualnym objaśnieniem dosłownym;
+- zachowywał osobę, czas, przeczenie i rejestr oraz podawał rodzajnik albo
+  konstrukcję czasownika, gdy pomaga to w nauce;
+- pokazywał pełną poprawioną odpowiedź, dokładny błąd i jego przyczynę;
 - nie wychodził poza zakres, jeśli pytanie dotyczy egzaminu;
 - jasno oznaczał rozszerzenia nauczyciela;
 - przy niepewności mówił, czego nie znalazł w źródłach;
@@ -168,11 +172,16 @@ Prompt systemowy wymaga, aby tutor:
 - preferował krótkie wyjaśnienie i jedno minićwiczenie kontrolne.
 
 Router nie rozrzuca identyfikatorów modeli po endpointach. Zadania klasyfikacji,
-scoringu i metadanych kieruje do Luna z `reasoning: none`; zwykły tutor korzysta
-z Terra z `low`, a wyjaśnienie gramatyki z `medium`. Sol uruchamia się tylko dla
-rzeczywiście trudnego/niejednoznacznego pytania albo repozytorium. Zwykła zmiana
-pliku ma `medium`, a większy refaktor/debugging `high`. Deterministyczny scoring
-pytań nie wywołuje modelu w ogóle.
+scoringu i metadanych kieruje do Luna z `reasoning: none`. Tutor korzysta z Sol:
+z `low` dla szybkich tłumaczeń i zwykłych wyjaśnień oraz z `medium` dla pytań
+trudnych lub niejednoznacznych. Terra pozostaje dla pozostałych zbalansowanych
+zadań generacyjnych. Zwykła zmiana pliku ma `medium`, a większy
+refaktor/debugging `high`. Deterministyczny scoring pytań nie wywołuje modelu.
+
+Limit ochronny tutora jest ustawiony na 1000 pytań na 10 minut z jednego adresu
+IP. Klient ponawia do dwóch razy chwilowe błędy sieciowe i odpowiedzi 5xx, ale nie
+zapętla ponowień przy pracy offline ani przy limicie konta OpenAI. Treść pytania
+pozostaje w panelu, aby użytkownik mógł ponowić je ręcznie.
 
 ### Ingest źródeł
 

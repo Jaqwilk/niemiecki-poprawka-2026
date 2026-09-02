@@ -71,8 +71,12 @@ export function routeModel(task: ModelTask, input = ''): ModelRoute {
     return { tier: 'smart', model: models.smart, reasoningEffort: 'medium' };
   }
 
-  if (task === 'grammar-explanation' || /dlaczego|różnic|porównaj|dativ|akkusativ|szyk/.test(input.toLocaleLowerCase('pl-PL'))) {
-    return { tier: 'default', model: models.default, reasoningEffort: 'medium' };
+  if (
+    task === 'tutor' ||
+    task === 'grammar-explanation' ||
+    /dlaczego|różnic|porównaj|dativ|akkusativ|szyk/.test(input.toLocaleLowerCase('pl-PL'))
+  ) {
+    return { tier: 'smart', model: models.smart, reasoningEffort: 'low' };
   }
 
   return { tier: 'default', model: models.default, reasoningEffort: 'low' };

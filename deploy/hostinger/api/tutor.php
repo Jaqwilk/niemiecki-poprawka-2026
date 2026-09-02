@@ -52,10 +52,7 @@ function route_model(string $question, array $models): array
     if ($complex) {
         return ['tier' => 'smart', 'model' => (string) $models['smart'], 'effort' => 'medium'];
     }
-    if (preg_match('/dlaczego|różnic|porównaj|gramat|dativ|akkusativ|końców|szyk|przyimek/u', $normalized)) {
-        return ['tier' => 'default', 'model' => (string) $models['default'], 'effort' => 'medium'];
-    }
-    return ['tier' => 'default', 'model' => (string) $models['default'], 'effort' => 'low'];
+    return ['tier' => 'smart', 'model' => (string) $models['smart'], 'effort' => 'low'];
 }
 
 function origin_is_allowed(array $allowedHosts): bool
@@ -70,7 +67,7 @@ function origin_is_allowed(array $allowedHosts): bool
 
 function rate_limit_exceeded(array $settings): bool
 {
-    $limit = max(1, (int) ($settings['limit'] ?? 30));
+    $limit = max(1, (int) ($settings['limit'] ?? 1000));
     $window = max(60, (int) ($settings['window_seconds'] ?? 600));
     $salt = (string) ($settings['salt'] ?? 'deutsch-ai');
     $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
@@ -263,7 +260,33 @@ if (!isset($models['default'], $models['smart'])) {
 }
 $routeModel = route_model($question, $models);
 $systemPrompt = <<<'PROMPT'
-Jesteś prywatnym korepetytorem języka niemieckiego dla polskiego ucznia, który przygotowuje się z Momente A1.2, Lektion 13–18. Dostarczone notatki kursowe są głównym źródłem prawdy. Domyślnie odpowiadaj krótko po polsku, a przykłady pozostaw po niemiecku. Dla gramatyki stosuj rytm: prosta odpowiedź, dlaczego, jeden przykład. Wyjaśniaj przyczynę błędu. Zwracaj poprawny Markdown zgodny z GFM, bez surowego HTML, i nie otaczaj całej odpowiedzi blokiem kodu. Używaj nagłówków tylko w dłuższej odpowiedzi. Gdy porównanie rzeczywiście zyskuje na tabeli, użyj krótkiej tabeli Markdown z maksymalnie 5 kolumnami i zwięzłymi komórkami. Bloków kodu używaj tylko na prośbę ucznia. Jeśli ostatnia wiadomość tutora była pytaniem lub zadaniem, a uczeń odpowiada krótko, oceń tę odpowiedź względem poprzedniego zadania. Zacznij od „Dobrze” albo „Nie tym razem”, a potem krótko wyjaśnij. Nie wprowadzaj Lektion 19 ani dalszych tematów. Jeśli notatki nie wystarczają, powiedz to jednym zdaniem przed użyciem wiedzy ogólnej. Nie udawaj cytatów ani numerów stron. Gdy pomaga to w nauce, zakończ jednym krótkim pytaniem kontrolnym.
+Rola: jesteś prywatnym korepetytorem języka niemieckiego dla polskiego ucznia przygotowującego się z Momente A1.2, Lektion 13–18.
+
+Cel: uczeń ma dostać poprawną, naturalną odpowiedź, zrozumieć decydującą regułę i umieć samodzielnie zastosować ją w podobnym przykładzie.
+
+Źródła i zakres:
+- Dostarczone notatki kursowe są głównym źródłem prawdy. Jeśli zawierają odpowiedź, trzymaj się ich i wskaż właściwą lekcję lub sekcję.
+- Nie wprowadzaj Lektion 19 ani dalszych tematów. Preferuj słownictwo i konstrukcje z Lektion 13–18.
+- Jeśli notatki nie wystarczają, powiedz to krótko przed użyciem ogólnej wiedzy językowej. Nie wymyślaj cytatów ani numerów stron.
+
+Sposób tłumaczenia:
+- Najpierw podaj naturalne tłumaczenie całego słowa, zwrotu albo zdania. Nie tłumacz mechanicznie słowo po słowie.
+- Z niemieckiego na polski zachowaj sens w danym kontekście. Dosłowną wersję dodaj tylko wtedy, gdy pomaga zrozumieć konstrukcję.
+- Z polskiego na niemiecki podaj najprostszą naturalną wersję na poziomie A1.2. Zachowaj osobę, czas, przeczenie i formalny lub nieformalny ton.
+- Przy rzeczowniku podaj rodzajnik i liczbę mnogą, jeśli są przydatne. Przy czasowniku podaj bezokolicznik i potrzebną konstrukcję lub przypadek.
+- Jeśli wyraz ma kilka znaczeń, wykorzystaj kontekst strony. Gdy dwie interpretacje są nadal prawdopodobne, pokaż najwyżej dwie i krótko opisz różnicę; nie zgaduj.
+
+Sposób wyjaśniania i poprawiania:
+- Zacznij od bezpośredniej odpowiedzi. Potem wyjaśnij prostym polskim, dlaczego forma jest poprawna, i podaj krótki przykład po niemiecku.
+- Przy błędzie pokaż najpierw całe poprawione zdanie, następnie wskaż dokładnie zmieniony fragment i jedną przyczynę. Nie ograniczaj się do samego wyniku.
+- Przy porównaniu form nazwij różnicę znaczenia i pokaż po jednym kontrastowym przykładzie.
+- Jeśli ostatnia wiadomość tutora była zadaniem, a uczeń odpowiada krótko, oceń ją względem tego zadania. Zacznij od „Dobrze” albo „Nie tym razem”, popraw odpowiedź i wyjaśnij najważniejszy błąd.
+- Dopasuj szczegółowość do pytania. Na „wyjaśnij dokładnie” odpowiedz szerzej; na proste pytanie nie twórz wykładu.
+
+Forma odpowiedzi:
+- Objaśnienia pisz po polsku, a przykłady po niemiecku. Używaj poprawnego Markdown GFM bez surowego HTML i bez otaczania całej odpowiedzi blokiem kodu.
+- Nagłówki i krótkie tabele stosuj tylko wtedy, gdy realnie ułatwiają zrozumienie. Nie przytłaczaj ucznia.
+- Pytanie kontrolne dodaj tylko wtedy, gdy pomaga przećwiczyć właśnie wyjaśnioną regułę.
 PROMPT;
 
 $requestPayload = [
@@ -271,8 +294,8 @@ $requestPayload = [
     'reasoning' => ['effort' => $routeModel['effort']],
     'instructions' => $systemPrompt,
     'input' => $history,
-    'text' => ['verbosity' => 'low'],
-    'max_output_tokens' => 700,
+    'text' => ['verbosity' => 'medium'],
+    'max_output_tokens' => 1000,
     'store' => false,
 ];
 
@@ -283,8 +306,8 @@ if ($curl === false) {
 curl_setopt_array($curl, [
     CURLOPT_POST => true,
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_CONNECTTIMEOUT => 10,
-    CURLOPT_TIMEOUT => 55,
+    CURLOPT_CONNECTTIMEOUT => 8,
+    CURLOPT_TIMEOUT => 75,
     CURLOPT_HTTPHEADER => [
         'Authorization: Bearer ' . text_value($config['openai_api_key'], 300),
         'Content-Type: application/json',
@@ -297,20 +320,40 @@ $status = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
 curl_close($curl);
 
 if ($curlError !== 0 || !is_string($rawResponse)) {
-    respond_json(['error' => 'Nie udało się połączyć z tutorem. Spróbuj ponownie.'], 502);
+    error_log('Deutsch AI curl error: ' . $curlError);
+    if ($curlError === CURLE_OPERATION_TIMEDOUT) {
+        respond_json(
+            ['error' => 'Tutor potrzebował zbyt dużo czasu. Pytanie jest zachowane — spróbuj ponownie.'],
+            504,
+            ['Retry-After' => '2'],
+        );
+    }
+    respond_json(
+        ['error' => 'Chwilowo nie udało się połączyć z tutorem. Pytanie jest zachowane — spróbuj ponownie.'],
+        502,
+        ['Retry-After' => '1'],
+    );
 }
 if ($status === 429) {
     respond_json(['error' => 'Limit OpenAI został chwilowo osiągnięty. Spróbuj ponownie za moment.'], 429, ['Retry-After' => '30']);
 }
 if ($status < 200 || $status >= 300) {
     error_log('Deutsch AI upstream status: ' . $status);
-    respond_json(['error' => 'OpenAI odrzuciło żądanie. Spróbuj ponownie później.'], 502);
+    respond_json(
+        ['error' => 'Tutor ma chwilowy problem po stronie usługi AI. Pytanie jest zachowane — spróbuj ponownie.'],
+        502,
+        ['Retry-After' => '1'],
+    );
 }
 
 $decoded = json_decode($rawResponse, true);
 $answer = is_array($decoded) ? response_text($decoded) : '';
 if ($answer === '') {
-    respond_json(['error' => 'Tutor zwrócił pustą odpowiedź. Spróbuj ponownie.'], 502);
+    respond_json(
+        ['error' => 'Tutor zwrócił pustą odpowiedź. Pytanie jest zachowane — spróbuj ponownie.'],
+        502,
+        ['Retry-After' => '1'],
+    );
 }
 
 header('Content-Type: text/markdown; charset=utf-8');

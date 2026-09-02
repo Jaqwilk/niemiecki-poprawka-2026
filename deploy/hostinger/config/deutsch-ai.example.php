@@ -14,7 +14,7 @@ return [
         'www.jebaccwelazniemieckiego.pl',
     ],
     'rate_limit' => [
-        'limit' => 30,
+        'limit' => 1000,
         'window_seconds' => 600,
         'salt' => 'replace-with-a-random-secret',
     ],

@@ -70,8 +70,11 @@ lokalnych notatkach. Jeśli ustawiony jest `OPENAI_VECTOR_STORE_ID`, Responses A
 dodatkowo korzysta z narzędzia `file_search`.
 
 Modele wybiera jedno miejsce: `src/lib/ai/model-router.ts`. Luna obsługuje tanie
-zadania strukturalne (`reasoning: none`), Terra zwykłe pytania tutora (`low` lub
-`medium`), a Sol tylko trudne pytania i Edit Mode (`medium` lub `high`).
+zadania strukturalne (`reasoning: none`), Sol wszystkie pytania tutora (`low` dla
+szybkiej odpowiedzi, `medium` dla złożonych wyjątków), a Terra pozostaje
+zbalansowanym modelem dla pozostałych zadań generacyjnych. Klient automatycznie
+ponawia chwilowe błędy połączenia, a limit aplikacji tutora wynosi 1000 pytań na
+10 minut z jednego adresu IP.
 
 Indeks źródeł tworzysz poleceniem:
 

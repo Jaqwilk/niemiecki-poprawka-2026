@@ -13,16 +13,17 @@ describe('model router', () => {
     });
   });
 
-  it('uses Terra and adjusts tutor effort', () => {
-    vi.stubEnv('OPENAI_MODEL', 'default-test-model');
+  it('uses Sol with low reasoning for fast, high-quality tutoring', () => {
+    vi.stubEnv('OPENAI_SMART_MODEL', 'smart-test-model');
     expect(routeModel('tutor', 'Co znaczy Aufzug?')).toMatchObject({
-      tier: 'default',
-      model: 'default-test-model',
+      tier: 'smart',
+      model: 'smart-test-model',
       reasoningEffort: 'low',
     });
     expect(routeModel('grammar-explanation', 'Dlaczego mit wymaga Dativu?')).toMatchObject({
-      tier: 'default',
-      reasoningEffort: 'medium',
+      tier: 'smart',
+      model: 'smart-test-model',
+      reasoningEffort: 'low',
     });
   });
 
@@ -40,6 +41,15 @@ describe('model router', () => {
     expect(routeModel('refactor', 'Przebuduj architekturę komponentów.')).toMatchObject({
       tier: 'smart',
       reasoningEffort: 'high',
+    });
+  });
+
+  it('keeps non-tutor generation on the balanced default tier', () => {
+    vi.stubEnv('OPENAI_MODEL', 'default-test-model');
+    expect(routeModel('practice-generation', 'Ułóż jedno ćwiczenie.')).toEqual({
+      tier: 'default',
+      model: 'default-test-model',
+      reasoningEffort: 'low',
     });
   });
 

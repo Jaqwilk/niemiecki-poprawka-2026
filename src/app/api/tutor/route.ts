@@ -22,7 +22,7 @@ type TutorRequest = {
 };
 
 const RATE_WINDOW_MS = 10 * 60 * 1000;
-const RATE_LIMIT = 30;
+const RATE_LIMIT = 1000;
 const requestBuckets = new Map<string, number[]>();
 
 function clientKey(request: Request) {
@@ -122,8 +122,8 @@ export async function POST(request: Request) {
       tools: config.vectorStoreId
         ? [{ type: 'file_search', vector_store_ids: [config.vectorStoreId], max_num_results: 6 }]
         : undefined,
-      text: { verbosity: 'low' },
-      max_output_tokens: 700,
+      text: { verbosity: 'medium' },
+      max_output_tokens: 1000,
       store: false,
       stream: true,
     });
@@ -139,7 +139,7 @@ export async function POST(request: Request) {
           }
           controller.close();
         } catch {
-          controller.enqueue(encoder.encode('\n\n> **Nie udało się dokończyć odpowiedzi.** Spróbuj ponownie.'));
+          controller.enqueue(encoder.encode('\n\n> **Połączenie zostało przerwane.** Pytanie jest zachowane — spróbuj ponownie.'));
           controller.close();
         }
       },
@@ -162,8 +162,8 @@ export async function POST(request: Request) {
       );
     }
     return Response.json(
-      { error: 'Nie udało się uruchomić tutora. Sprawdź konfigurację serwera i spróbuj ponownie.' },
-      { status: 502 },
+      { error: 'Tutor ma chwilowy problem z połączeniem. Pytanie jest zachowane — spróbuj ponownie.' },
+      { status: 502, headers: { 'Retry-After': '1' } },
     );
   }
 }

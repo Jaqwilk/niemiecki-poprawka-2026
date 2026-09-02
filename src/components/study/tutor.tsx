@@ -3,6 +3,14 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Bot, Check, Copy, CornerDownLeft, RotateCcw, Send, Sparkles, Square, Trash2, X } from 'lucide-react';
+import {
+  MAX_TUTOR_RETRIES,
+  readTutorFailure,
+  shouldRetryTutorRequest,
+  tutorNetworkErrorMessage,
+  tutorRetryDelay,
+  waitForTutorRetry,
+} from '@/lib/ai/tutor-client';
 import { useStudyState } from './state-provider';
 import { TutorMarkdown } from './tutor-markdown';
 import styles from './tutor.module.css';
@@ -42,7 +50,7 @@ function inferLesson(pathname: string) {
 
 const thinkingSteps = ['Czytam notatki kursu', 'Łączę reguły i przykłady', 'Układam prostą odpowiedź'];
 
-function TutorThinking() {
+function TutorThinking({ retryAttempt }: { retryAttempt: number }) {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
@@ -55,7 +63,7 @@ function TutorThinking() {
   return (
     <div role="status" aria-live="polite" className="rounded-2xl rounded-tl-sm border border-fd-border bg-fd-card px-3.5 py-3 shadow-sm">
       <div className="flex items-center gap-2.5 text-xs font-medium text-fd-muted-foreground">
-        <span>{thinkingSteps[step]}</span>
+        <span>{retryAttempt > 0 ? `Połączenie przerwane — ponawiam (${retryAttempt}/${MAX_TUTOR_RETRIES})` : thinkingSteps[step]}</span>
         <span className="flex items-center gap-1" aria-hidden="true">
           {[0, 1, 2].map((dot) => (
             <span key={dot} className={`${styles.thinkingDot} size-1 rounded-full bg-fd-primary`} />
@@ -125,6 +133,7 @@ export function StudyTutor() {
   const [messages, setMessages] = useState<TutorMessage[]>([]);
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
+  const [retryAttempt, setRetryAttempt] = useState(0);
   const [error, setError] = useState('');
   const [lastQuestion, setLastQuestion] = useState('');
   const [copiedMessage, setCopiedMessage] = useState<number | null>(null);
@@ -139,6 +148,7 @@ export function StudyTutor() {
     abortRef.current = null;
     setOpen(false);
     setLoading(false);
+    setRetryAttempt(0);
     setMessages((current) => {
       const last = current.at(-1);
       return last?.role === 'assistant' && !last.text ? current.slice(0, -1) : current;
@@ -237,6 +247,7 @@ export function StudyTutor() {
     abortRef.current?.abort();
     abortRef.current = null;
     setLoading(false);
+    setRetryAttempt(0);
     setMessages((current) => {
       const last = current.at(-1);
       if (last?.role !== 'assistant') return current;
@@ -252,6 +263,7 @@ export function StudyTutor() {
     setError('');
     setQuestion('');
     setLastQuestion('');
+    setRetryAttempt(0);
     setCopiedMessage(null);
     window.setTimeout(() => inputRef.current?.focus(), 0);
   }
@@ -266,6 +278,7 @@ export function StudyTutor() {
     setQuestion('');
     setLastQuestion(value);
     setLoading(true);
+    setRetryAttempt(0);
     shouldAutoScrollRef.current = true;
     const userMessage: TutorMessage = { role: 'user', text: value };
     setMessages([...conversation, userMessage, { role: 'assistant', text: '' }]);
@@ -278,25 +291,46 @@ export function StudyTutor() {
       .map((mistake) => mistake.topic);
 
     try {
-      const response = await fetch('/api/tutor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          question: value,
-          context: {
-            ...selectionContext,
-            route: pathname,
-            lesson: selectionContext.lesson ?? inferLesson(pathname),
-            weakTopics,
-          },
-          history: conversation.slice(-6),
-        }),
+      const body = JSON.stringify({
+        question: value,
+        context: {
+          ...selectionContext,
+          route: pathname,
+          lesson: selectionContext.lesson ?? inferLesson(pathname),
+          weakTopics,
+        },
+        history: conversation.slice(-6),
       });
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(payload?.error || 'Nie udało się uzyskać odpowiedzi.');
+      let response: Response | null = null;
+
+      for (let attempt = 0; attempt <= MAX_TUTOR_RETRIES; attempt += 1) {
+        try {
+          response = await fetch('/api/tutor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body,
+          });
+        } catch (caught) {
+          if (controller.signal.aborted) throw caught;
+          if (attempt >= MAX_TUTOR_RETRIES || !navigator.onLine) {
+            throw new Error(tutorNetworkErrorMessage(navigator.onLine));
+          }
+          setRetryAttempt(attempt + 1);
+          await waitForTutorRetry(tutorRetryDelay(attempt), controller.signal);
+          continue;
+        }
+
+        if (response.ok) break;
+        const failure = await readTutorFailure(response);
+        if (!shouldRetryTutorRequest(response.status, attempt, failure.offline)) {
+          throw new Error(failure.message);
+        }
+        setRetryAttempt(attempt + 1);
+        await waitForTutorRetry(tutorRetryDelay(attempt), controller.signal);
       }
+      if (!response?.ok) throw new Error(tutorNetworkErrorMessage(navigator.onLine));
+      setRetryAttempt(0);
       if (!response.body) throw new Error('Serwer nie zwrócił strumienia odpowiedzi.');
       const source = response.headers.get('X-Study-Source') ?? undefined;
       const tier = response.headers.get('X-Model-Tier') ?? undefined;
@@ -323,15 +357,20 @@ export function StudyTutor() {
         appendDelta(decoder.decode(chunk, { stream: true }));
       }
       appendDelta(decoder.decode());
-      if (!receivedText.trim()) throw new Error('Tutor zwrócił pustą odpowiedź. Spróbuj ponownie.');
+      if (!receivedText.trim()) {
+        throw new Error('Tutor zwrócił pustą odpowiedź. Pytanie jest zachowane — spróbuj ponownie.');
+      }
     } catch (caught) {
       if (controller.signal.aborted) return;
-      const message = caught instanceof Error ? caught.message : 'Nie udało się uzyskać odpowiedzi.';
+      const message = caught instanceof Error && !(caught instanceof TypeError)
+        ? caught.message
+        : tutorNetworkErrorMessage(navigator.onLine);
       setError(message);
       setMessages((current) => (current.at(-1)?.role === 'assistant' ? current.slice(0, -1) : current));
     } finally {
       if (abortRef.current === controller) {
         setLoading(false);
+        setRetryAttempt(0);
         abortRef.current = null;
         window.setTimeout(() => inputRef.current?.focus(), 0);
       }
@@ -538,7 +577,7 @@ export function StudyTutor() {
                             </div>
                             <div className="min-w-0 flex-1">
                               {thinking ? (
-                                <TutorThinking />
+                                <TutorThinking retryAttempt={retryAttempt} />
                               ) : (
                                 <div className="min-w-0 rounded-2xl rounded-tl-sm border border-fd-border bg-fd-card px-3.5 py-3 shadow-sm">
                                   <TutorMarkdown>{message.text}</TutorMarkdown>
