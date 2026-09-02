@@ -1,6 +1,7 @@
 import { copyFile, cp, mkdir, readFile, readdir, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 const root = process.cwd();
 const tempRoot = path.join(root, 'tmp', 'hostinger-export');
@@ -124,6 +125,62 @@ async function mirrorNextDataFiles(directory) {
   }
 }
 
+function toPublicPath(relativePath) {
+  const segments = relativePath.split(path.sep).map((segment) =>
+    encodeURIComponent(segment)
+      // Next's exported RSC filenames are requested with literal dollar signs.
+      .replaceAll('%24', '$')
+      // Keep escape sequences already emitted by Next from being double-encoded.
+      .replaceAll('%25', '%'),
+  );
+  return `/${segments.join('/')}`;
+}
+
+async function generateOfflineWorker() {
+  const sourcePath = path.join(root, 'public', 'sw.js');
+  const outputPath = path.join(outputRoot, 'sw.js');
+  const files = (await collectFiles(outputRoot))
+    .map((filePath) => ({
+      filePath,
+      relativePath: path.relative(outputRoot, filePath),
+    }))
+    .filter(({ relativePath }) => {
+      const normalized = relativePath.split(path.sep).join('/');
+      return (
+        normalized !== '.htaccess' &&
+        normalized !== 'sw.js' &&
+        !normalized.startsWith('api/') &&
+        !normalized.endsWith('.php')
+      );
+    })
+    .sort((left, right) => left.relativePath.localeCompare(right.relativePath));
+
+  const hash = createHash('sha256');
+  const assets = new Set(['/']);
+
+  for (const { filePath, relativePath } of files) {
+    const contents = await readFile(filePath);
+    const normalized = relativePath.split(path.sep).join('/');
+    hash.update(normalized);
+    hash.update(contents);
+    assets.add(toPublicPath(relativePath));
+
+    if (normalized === 'index.html') assets.add('/');
+    else if (normalized.endsWith('/index.html')) {
+      assets.add(`/${normalized.slice(0, -'index.html'.length)}`);
+    }
+  }
+
+  const version = hash.digest('hex').slice(0, 16);
+  const workerSource = await readFile(sourcePath, 'utf8');
+  const buildConfig = `self.__DEUTSCH_OFFLINE_BUILD__ = ${JSON.stringify({
+    version,
+    assets: [...assets].sort(),
+  })};\n`;
+  await writeFile(outputPath, `${buildConfig}${workerSource}`, 'utf8');
+  process.stdout.write(`Offline copy ready: ${assets.size} resources (${version})\n`);
+}
+
 for (const generatedPath of [tempRoot, outputRoot, configOutputRoot]) assertWorkspacePath(generatedPath);
 await rm(tempRoot, { recursive: true, force: true });
 await rm(outputRoot, { recursive: true, force: true });
@@ -174,6 +231,7 @@ try {
   await cp(path.join(root, 'deploy', 'hostinger', 'api'), path.join(outputRoot, 'api'), { recursive: true });
   await cp(path.join(root, 'deploy', 'hostinger', '.htaccess'), path.join(outputRoot, '.htaccess'));
   await buildStudyIndex();
+  await generateOfflineWorker();
   process.stdout.write(`Hostinger build ready: ${outputRoot}\n`);
 } finally {
   await rm(tempRoot, { recursive: true, force: true });
